@@ -1,59 +1,110 @@
 # DiagnostiPC
 
 Sistema experto para el diagnóstico de fallas de hardware y software en computadores personales.
-**Prolog** (SWI-Prolog) guarda todo el conocimiento y el razonamiento; **Python** solo hace de puente y de consola.
+**Prolog** (SWI-Prolog) contiene el 100% del conocimiento y el razonamiento lógico; **Python** actúa exclusivamente como puente de comunicación e interfaz de consola.
 
-Asignatura: Sistemas Expertos · Ingeniería de Software · Fundación Escuela Tecnológica de Neiva (FET), sede Rivera-Huila.
-Docente: Juan José Ramos Díaz.
+- **Asignatura:** Sistemas Expertos · Ingeniería de Software
+- **Institución:** Fundación Escuela Tecnológica de Neiva (FET), sede Rivera-Huila
+- **Docente:** Juan José Ramos Díaz
+- **Integrantes:** Juan Carlos Bastidas Bernal & Julian Alfonso Montero Trujillo
 
-> Este repositorio parte de un **paquete de documentación y plan de desarrollo** (carpeta `docs/` + `AGENTS.md`). El código aún no existe: se construye tarea por tarea siguiendo `docs/ai/04-hoja-de-ruta.md`.
+---
+
+## Estado del Proyecto
+
+- **Fase:** F4 — Cierre de Entregables y Documentación Completa.
+- **Implementación:** 100% operativa y probada.
+- **Base de Conocimiento:** 66 hechos estructurados (aridad 2) y 17 reglas encadenadas en 3 niveles estrictos.
+- **Pruebas:** 5/5 casos de prueba pasando con éxito (100% PASS) y evidencias fotográficas integradas.
+
+---
 
 ## Qué hace
 
-Recibe una lista de respuestas sobre lo que el usuario observa en su equipo (enciende o no, pitidos, imagen, temperatura, software…) y devuelve los diagnósticos probables, ordenados por **severidad ajustada** y **certeza**, cada uno con su recomendación. Si no hay evidencia suficiente, lo dice (`datos_insuficientes` / `no_concluyente`) en lugar de inventar.
+DiagnostiPC recibe un conjunto de síntomas y observaciones reportadas por el usuario (pantalla azul, ruidos extraños, sobrecalentamiento, reinicios aleatorios, artefactos gráficos, etc.) y genera un diagnóstico estructurado:
 
-## Cómo usar este paquete
+1. **Identifica el componente dominante** afectado (CPU, RAM, GPU, Almacenamiento, Fuente, Placa Base, Refrigeración).
+2. **Genera diagnósticos específicos** asociados con su nivel de **severidad** (`bajo`, `medio`, `alto`, `critico`).
+3. **Aplica reglas de exclusión mutua** mediante corte (`!`) y negación por fallo (`\+`) para descartar diagnósticos incompatibles.
+4. **Maneja casos borde** con robustez (listas vacías o datos insuficientes no lanzan excepciones ni fallan, devolviendo estados consistentes).
 
-1. Crea un repositorio vacío y copia en su raíz: `AGENTS.md`, `CLAUDE.md`, `README.md`, `.gitignore` y la carpeta `docs/`.
-2. Lee `docs/ai/09-guia-trabajo-con-ia.md` (cómo trabajar en pareja con agentes de IA) y `docs/ai/05-estado-sesion.md` (dónde estamos).
-3. Responde las **preguntas abiertas** de `05` (fecha de entrega, nombres y códigos, confirmaciones con el docente).
-4. Abre una sesión con tu agente usando `docs/ai/templates/prompt-inicio-sesion.md` y trabaja **una tarea por sesión** de `04-hoja-de-ruta.md`.
-5. Al cerrar cada sesión, usa `templates/prompt-cierre-sesion.md`.
+---
 
-## Mapa de documentación
-
-| Carpeta / archivo        | Contenido                                                                                                                     |
-| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
-| `AGENTS.md`, `CLAUDE.md` | Reglas de oro y protocolos para agentes de IA                                                                                 |
-| `docs/ai/`               | Contexto, arquitectura, pautas, hoja de ruta, estado, bitácora, decisiones, glosario, errores conocidos y plantillas          |
-| `docs/adr/`              | Decisiones de arquitectura (ADR 001–006)                                                                                      |
-| `docs/architecture/`     | Diagramas: capas, niveles de reglas, flujo de una consulta                                                                    |
-| `docs/entregables/`      | Los 4 artefactos de entrega: ficha, diccionario de predicados, evidencia de pruebas y la matriz de cumplimiento de requisitos |
-| `docs/product/`          | Alcance, riesgos y guía de adquisición de conocimiento (fuentes y consulta con el técnico)                                    |
-
-## Estructura final del repositorio (objetivo)
+## Estructura del Repositorio
 
 ```
 .
-├── base_conocimiento.pl        # hechos + reglas (un solo archivo, secciones comentadas)
-├── motor_inferencia.py         # puente a SWI-Prolog: carga la base y expone funciones
-├── main.py                     # consola interactiva (cuestionario + resultados)
-├── pruebas.py                  # ≥ 5 casos formateados + evidencia
-├── tests/tests_kb.pl           # pruebas unitarias en Prolog (plunit)
-├── evidencia/                  # salida de pruebas y capturas
-├── docs/                       # este paquete
-├── AGENTS.md  CLAUDE.md  README.md  requirements.txt
+├── base_conocimiento.pl        # Base de conocimiento Prolog (66 hechos, 17 reglas en 3 niveles)
+├── motor_inferencia.py         # Módulo puente Python ↔ SWI-Prolog vía PySwip
+├── pruebas.py                  # Suite de pruebas automatizadas por consola (5 casos, 100% PASS)
+├── entregable_1_sistema_experto_diagnostipc.md # Documento del Entregable 1
+├── docs/                       # Documentación técnica y evidencias
+│   ├── entregables/            # Los 4 artefactos de entrega + evidencias fotográficas
+│   │   ├── 01-ficha-definicion.md
+│   │   ├── 02-matriz-cumplimiento.md
+│   │   ├── 03-diccionario-predicados.md
+│   │   ├── 04-evidencia-pruebas.md
+│   │   └── evidencia/          # Capturas de pantalla de ejecuciones y consultas
+│   ├── architecture/           # Diagramas de capas, niveles de reglas y flujo
+│   ├── adr/                    # Registro de Decisiones de Arquitectura (ADRs 001–006)
+│   ├── product/                # Alcance, cronograma y adquisición de conocimiento
+│   └── ai/                     # Contexto técnico, hoja de ruta, bitácora y estado de sesión
+├── AGENTS.md                   # Reglas de oro y protocolos para agentes IA
+├── CLAUDE.md                   # Instrucciones para Claude Code
+└── README.md                   # Documentación principal del proyecto
 ```
 
-## Comandos (se confirman en la tarea F0-01/F0-03)
+---
+
+## Requisitos y Entorno de Ejecución
+
+- **SWI-Prolog:** 10.0.2 o superior (agregado al `PATH` del sistema).
+- **Python:** 3.10 a 3.14.
+- **PySwip:** 0.3.3 (`pip install pyswip`).
+
+---
+
+## Comandos de Ejecución y Verificación
+
+### 1. Ejecutar la Suite de Pruebas Automatizada (Python)
+
+Ejecuta los 5 casos de prueba obligatorios (normales, exclusión, datos insuficientes y lista vacía):
 
 ```bash
-python -m pip install -r requirements.txt           # puente (PySwip o Janus, ver ADR-002)
-swipl -q -g run_tests -t halt tests/tests_kb.pl     # pruebas de la base de conocimiento
-python pruebas.py                                   # casos de prueba por consola
-python main.py                                      # consulta interactiva
+python pruebas.py
+# o en Windows si python apunta al launcher:
+py pruebas.py
 ```
 
-## Cumplimiento de requisitos
+### 2. Verificar la Base de Conocimiento en SWI-Prolog
 
-La trazabilidad requisito → implementación → prueba está en `docs/entregables/02-matriz-cumplimiento.md`.
+Comprueba que la base de conocimiento compila limpiamente sin advertencias ni errores:
+
+```bash
+swipl -q -g "consult('base_conocimiento.pl')" -t halt
+```
+
+### 3. Consultar Directamente en Consola Prolog
+
+```bash
+swipl -q base_conocimiento.pl
+```
+
+Ejemplo de consulta interactiva:
+
+```prolog
+?- diagnosticar_todos([pantalla_azul, errores_memoria, reinicios_aleatorios], cualquiera, Diags).
+Diags = [falla_ram-alto].
+```
+
+---
+
+## Mapa de Documentación y Entregables
+
+| Documento                      | Ubicación                                                                                                                                | Descripción                                              |
+| :----------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------- |
+| **Ficha de Definición**        | [`01-ficha-definicion.md`](file:///C:/Users/yetshal/DevelopmentProjects/DiagnostiPC/docs/entregables/01-ficha-definicion.md)             | Integrantes, justificación como SBR y alcance.           |
+| **Matriz de Cumplimiento**     | [`02-matriz-cumplimiento.md`](file:///C:/Users/yetshal/DevelopmentProjects/DiagnostiPC/docs/entregables/02-matriz-cumplimiento.md)       | Trazabilidad 100% de requisitos del curso §3 y §4.       |
+| **Diccionario de Predicados**  | [`03-diccionario-predicados.md`](file:///C:/Users/yetshal/DevelopmentProjects/DiagnostiPC/docs/entregables/03-diccionario-predicados.md) | Especificación de aridades, modos (+/-) y niveles N1–N3. |
+| **Evidencias y Pruebas**       | [`04-evidencia-pruebas.md`](file:///C:/Users/yetshal/DevelopmentProjects/DiagnostiPC/docs/entregables/04-evidencia-pruebas.md)           | Detalle de casos probados y capturas de terminal.        |
+| **Decisiones de Arquitectura** | [`docs/adr/`](file:///C:/Users/yetshal/DevelopmentProjects/DiagnostiPC/docs/adr/)                                                        | ADR 001 a ADR 006 aceptadas y vigentes.                  |

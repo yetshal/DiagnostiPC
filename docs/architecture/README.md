@@ -1,91 +1,85 @@
-# Arquitectura — diagramas
+# Arquitectura — Diagramas y Estructura del Sistema
 
-> Complementa `docs/ai/02-arquitectura.md` (fuente de verdad). Si hay diferencias, manda `02`.
+> Complementa la documentación técnica de DiagnostiPC y describe la arquitectura real implementada.
 
-## Capas y responsabilidades
+---
+
+## 1. Capas y Responsabilidades
 
 ```mermaid
 flowchart LR
-  U[Usuario<br/>consola] --> M[main.py<br/>cuestionario y resultados]
-  T[pruebas.py<br/>casos y evidencia] --> P
-  M --> P[motor_inferencia.py<br/>puente: cargar, consultar, formatear]
-  P -->|PySwip o Janus| S[SWI-Prolog]
-  S --> K[(base_conocimiento.pl<br/>hechos · reglas N1-N3 · certeza · severidad)]
-  K -.->|catálogo de preguntas y textos| M
+  U[Usuario / Tester<br/>Terminal de Consola] --> T[pruebas.py<br/>Suite de pruebas y formateo]
+  T --> P[motor_inferencia.py<br/>Puente Python: PySwip]
+  P -->|PySwip C Foreign Interface| S[SWI-Prolog Engine]
+  S --> K[(base_conocimiento.pl<br/>66 hechos · 17 reglas N1-N3 · Severidad)]
 ```
 
-Todo lo que decide está a la derecha del puente; a la izquierda solo se captura, se muestra y se prueba.
+- **Lógica de Inferencia (Prolog):** El 100% de la deducción, descarte, agregación sin duplicados y severidad reside en `base_conocimiento.pl`.
+- **Puente y Presentación (Python):** `motor_inferencia.py` encapsula la comunicación con SWI-Prolog, convierte términos y tipos, y entrega resultados estructurados a `pruebas.py`.
 
-## Estructura de `base_conocimiento.pl` y dependencias entre niveles
+---
+
+## 2. Dependencias entre Niveles de Reglas
 
 ```mermaid
 flowchart TD
-  H[Hechos<br/>catálogo de variables · diagnósticos · escalas] --> L[Utilidades de listas<br/>respuesta, cumple_todas, contar_cumplidas, filtrar_validas]
-  L --> N1[Nivel 1<br/>condiciones elementales]
-  N1 --> N2[Nivel 2<br/>categorías e indicios]
-  N2 --> N3[Nivel 3<br/>evidencia/4: reglas de diagnóstico]
-  N3 --> C[Certeza<br/>combinar_certeza, nivel_certeza]
-  N3 --> SV[Severidad<br/>severidad_ajustada]
-  C --> API[diagnosticar_todos/3<br/>findall + orden + estados]
-  SV --> API
+  H[Hechos Base<br/>sintoma_valido, componente_sintoma, patron_falla,<br/>severidad_diagnostico, excluye, diagnostico_describe]
+
+  H --> N1[Nivel 1: Validación y Condiciones Elementales<br/>sintoma_en_lista/2, lista_contiene_minimo/3,<br/>subconjunto_valido/2, es_sintoma_critico/1]
+
+  N1 --> N2[Nivel 2: Inferencia Intermedia y Patrones<br/>patron_presente/2, componente_sospechoso/2,<br/>diagnostico_excluido/2, tiene_sintomas_suficientes/1,<br/>componente_dominante/2]
+
+  N2 --> N3[Nivel 3: Conclusión Final y Recolección<br/>diagnostico_candidato/3, diagnostico_con_severidad/3,<br/>diagnosticar_todos/3 con findall y list_to_set]
+
+  H --> SV[Severidad Determinista<br/>severidad_caso/2]
+  SV --> N3
 ```
 
-La flecha es «es usado por». Ninguna dependencia sube de nivel: no hay ciclos por construcción (ADR-004).
+> **Garantía sin ciclos:** El flujo de dependencia es estrictamente descendente ($H \rightarrow N1 \rightarrow N2 \rightarrow N3$). No existe recursión izquierda ni referencias circulares.
 
-## Ejemplo de encadenamiento (caso del Entregable 1)
+---
 
-```mermaid
-flowchart LR
-  A[enciende-si] --> N1a[equipo_enciende]
-  B[imagen-no] --> N1b[sin_imagen]
-  C[pitidos-largos] --> N1c[pitidos_largos]
-  N1a --> CAT[categoria arranque]
-  N1b --> CAT
-  N1c --> CAT
-  CAT --> R12[r12 · FC 80]
-  N1b --> R12
-  N1c --> R12
-  D[cambio_hardware-si] --> R13[r13 · FC 50]
-  CAT --> R13
-  R12 --> FC[combinar: 80 + 50·20/100 = 90]
-  R13 --> FC
-  FC --> DX[falla_ram · muy_probable]
-  DX --> SEV[severidad base alta → media<br/>por cambio de hardware]
-```
-
-## Flujo de una consulta
+## 3. Flujo de una Consulta de Diagnóstico
 
 ```mermaid
 sequenceDiagram
-  actor U as Usuario
-  participant M as main.py
-  participant P as motor_inferencia.py
-  participant K as Prolog (base_conocimiento.pl)
-  M->>P: catalogo()
-  P->>K: catalogo_preguntas(P)
-  K-->>P: [[Var, Grupo, Texto, Valores], ...]
-  P-->>M: preguntas
-  M->>U: formula preguntas y opciones
-  U-->>M: respuestas (opciones numeradas)
-  M->>P: diagnosticar([(var, valor), ...])
-  P->>K: diagnosticar_todos([var-valor, ...], R, E)
-  K->>K: validar, N1 → N2 → N3, combinar FC, severidad, findall, ordenar
-  K-->>P: R (lista ordenada) y E (estado)
-  P-->>M: {estado, resultados}
-  M->>U: tabla de diagnósticos / mensaje por estado
+  actor T as Suite pruebas.py
+  participant M as motor_inferencia.py
+  participant P as SWI-Prolog Engine
+  participant K as base_conocimiento.pl
+
+  T->>M: consultar_diagnosticos(sintomas, comp)
+  M->>P: Prolog.query("diagnosticar_todos([...], Comp, Diags)")
+  P->>K: tiene_sintomas_suficientes(Sintomas)
+  alt Síntomas insuficientes (< 2)
+    K-->>P: Fallback con corte (!) -> Diags = []
+  else Síntomas suficientes
+    K->>K: Nivel 1: validar pertenencia de síntomas
+    K->>K: Nivel 2: patron_presente y \+ diagnostico_excluido
+    K->>K: Nivel 3: diagnostico_con_severidad (Diag-Sev)
+    K->>K: findall/3 + list_to_set/2 (elimina duplicados)
+    K-->>P: Diags = [falla_ram-alto, ...]
+  end
+  P-->>M: Generador de soluciones PySwip
+  M->>M: Parseo de términos Functor/Str a tuplas Python
+  M-->>T: Lista de tuplas [(diagnostico, severidad), ...]
+  T->>T: Formateo visual y verificación PASS/FAIL
 ```
 
-## Decisión de estado (con cortes)
+---
+
+## 4. Mecanismo de Exclusión y Casos Borde
 
 ```mermaid
 flowchart TD
-  S[Respuestas] --> V{¿Hay valores fuera de catálogo?}
-  V -- sí --> E1[entrada_invalida, resultados vacíos]
-  V -- no --> I{¿Menos de N_MIN síntomas?}
-  I -- sí --> E2[datos_insuficientes]
-  I -- no --> D{¿Algún diagnóstico con FC ≥ 20?}
-  D -- no --> E3[no_concluyente]
-  D -- sí --> E4[ok: lista ordenada por severidad y certeza]
+  In[Lista de Síntomas Observados] --> Suf{¿Tiene al menos 2 síntomas válidos?}
+  Suf -- No --> FB[Fallback con corte ! y \+<br/>Retorna lista vacía [] sin error]
+  Suf -- Sí --> Pat{¿Coincide con patron_falla/2?}
+  Pat -- No --> Disc[No concluyente / Descartado]
+  Pat -- Sí --> Exc{¿Está excluido por otro diagnóstico?<br/>\+ diagnostico_excluido/2}
+  Exc -- Sí --> Disc
+  Exc -- No --> Cand[Diagnóstico Candidato Válido]
+  Cand --> Sev[Asignar Severidad Determinista<br/>severidad_diagnostico/2]
+  Sev --> Coll[Recolección findall/3 + list_to_set/2]
+  Coll --> Out[Lista Final de Diagnósticos Ordenada y Única]
 ```
-
-Cada rama es una cláusula de `estado_consulta/3` con corte; la última es el valor por defecto.

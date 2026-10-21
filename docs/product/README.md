@@ -1,41 +1,39 @@
-# Producto — alcance, cronograma y riesgos
+# Producto — Alcance, Cronograma y Resultados
 
-> Versión corta para decisiones de alcance. Requisitos completos: `docs/ai/01-contexto-proyecto.md`.
+> Resumen de producto y estado de entrega. Requisitos completos y trazabilidad: [`docs/entregables/02-matriz-cumplimiento.md`](../entregables/02-matriz-cumplimiento.md).
 
-## Problema y propuesta de valor
+## Problema y Propuesta de Valor
 
-> «Dime qué observas en tu computador y te digo qué le pasa probablemente, qué tan urgente es y qué hacer primero.»
+> «Dime qué observas en tu computador y te digo qué le pasa probablemente, qué componente está afectado, qué tan urgente es y qué acciones tomar.»
 
-## Alcance
+## Alcance Implementado
 
-**Sí:** 38 variables de entrada, 10 diagnósticos, tres niveles de reglas, certeza, severidad ajustada, recolección ordenada, consola, pruebas.
-**No:** interfaz gráfica, servidores, Mac, periféricos, fallas de red, recuperación de datos.
+- **Componentes analizados:** CPU, RAM, GPU, Almacenamiento, Fuente de Poder, Placa Base, Refrigeración.
+- **Base de Conocimiento:** 66 hechos estructurados de aridad 2 y 17 reglas encadenadas en 3 niveles lógicos (N1: validación, N2: patrones, N3: conclusión).
+- **Mecanismos de inferencia:** Encadenamiento hacia adelante con corte (`!`), negación por fallo (`\+`), agregación sin duplicados (`findall/3` + `list_to_set/2`) y clasificación de severidad (`bajo`, `medio`, `alto`, `critico`).
+- **Módulo puente:** Python ↔ SWI-Prolog mediante `PySwip`, garantizando que la lógica de inferencia resida 100% en Prolog.
+- **Pruebas y robustez:** Suite de 5 casos automatizados cubriendo casos normales, exclusión mutua y casos borde (datos insuficientes y lista vacía sin excepciones).
+- **Fuera de alcance:** Interfaz gráfica (GUI/Tkinter), servidores, Mac/Apple, periféricos externos, diagnóstico de redes y recuperación física de datos.
 
-## Cronograma por fases (en sesiones; fechas por definir)
+---
 
-| Fase                     | Sesiones | Hito                                                                |
-| ------------------------ | -------- | ------------------------------------------------------------------- |
-| F0 Preparación           | S1–S2    | Puente probado y plunit corriendo; dudas con el docente resueltas   |
-| F1 Conocimiento y hechos | S3–S5    | Catálogos, tabla de conocimiento validada, validación de listas     |
-| F2 Motor lógico          | S6–S10   | N1–N3, certeza, severidad, recolección; **decisión de recorte**     |
-| F3 Integración           | S11–S13  | `motor_inferencia.py`, `main.py`, `pruebas.py`                      |
-| F4 Entrega               | S14–S15  | Diccionario, evidencia, ficha, matriz 100 %, ensayo de sustentación |
+## Estado del Cronograma por Fases
 
-Para convertirlo a fechas: sesión S1 = día de inicio; con una sesión diaria, S15 ≈ día 15; deja 2 días de colchón antes de la entrega.
+| Fase                         | Estado       | Resultado Logrado                                                                                   |
+| ---------------------------- | ------------ | --------------------------------------------------------------------------------------------------- |
+| **F0 · Preparación**         | ✅ Concluida | Entorno configurado (SWI-Prolog 10.0.2 + Python 3.14 + PySwip 0.3.3) y arquitectura definida.       |
+| **F1 · Hechos y Catálogo**   | ✅ Concluida | 66 hechos de aridad 2 (síntomas, componentes, severidades, exclusiones y descripciones).            |
+| **F2 · Motor Lógico**        | ✅ Concluida | 17 reglas encadenadas en 3 niveles sin bucles, cortes justificados y negación por fallo segura.     |
+| **F3 · Integración Consola** | ✅ Concluida | `motor_inferencia.py` y `pruebas.py` ejecutando 5 casos de prueba con 100% PASS.                    |
+| **F4 · Entrega y Cierre**    | ✅ Concluida | Ficha, Diccionario de predicados sincronizado, Matriz de cumplimiento 100% y capturas de evidencia. |
 
-## Riesgos principales
+---
 
-| Riesgo                                                         | Prob. | Impacto | Mitigación                                                                           |
-| -------------------------------------------------------------- | ----- | ------- | ------------------------------------------------------------------------------------ |
-| El puente (PySwip/Janus) no funciona en alguna máquina         | Media | Alto    | Spike en F0-02; puente aislado (ADR-002); probar en ambas máquinas                   |
-| Reglas con conocimiento técnico incorrecto                     | Alta  | Alto    | Fuentes obligatorias; dos reuniones con el técnico; marca `[PENDIENTE-VALIDAR]`      |
-| La IA mete lógica en Python o reglas que se saltan niveles     | Media | Alto    | `AGENTS.md`; checklist; verificación de F2-10 y F4-05                                |
-| Ciclos o cortes mal puestos que dan resultados inestables      | Media | Medio   | Dependencias descendentes; pruebas con entradas aleatorias; comentarios obligatorios |
-| Discrepancia Entregable 1 ↔ requisitos (Tkinter, nº de reglas) | Alta  | Medio   | Conciliación en `01 §6`; preguntas al docente en F0-04                               |
-| Se concentra el conocimiento en una persona                    | Media | Medio   | Revisión cruzada de cada PR; ensayo de sustentación mutuo                            |
-| Retraso acumulado                                              | Media | Alto    | Regla de recorte fija (`04`)                                                         |
-| Problemas de codificación (tildes) en Windows                  | Media | Bajo    | Identificadores sin tildes; prueba en F0-02                                          |
+## Principales Riesgos y su Resolución
 
-## Qué NO prometer
-
-No es un sustituto del técnico: diagnostica causas **probables** a partir de lo que el usuario reporta, no mide el hardware. Cuando la evidencia no alcanza, el sistema lo dice.
+| Riesgo inicial                                          | Nivel inicial | Resolución final                                                                                         |
+| ------------------------------------------------------- | ------------- | -------------------------------------------------------------------------------------------------------- |
+| Compatibilidad de PySwip con versiones recientes        | Alto          | Resuelto: PySwip 0.3.3 cargando `base_conocimiento.pl` por ruta absoluta limpia sin errores.             |
+| Falta de encadenamiento o salto de niveles en reglas    | Alto          | Resuelto: Separación estricta Nivel 1 → Nivel 2 → Nivel 3 verificada en matriz y pruebas.                |
+| Lógica lógica filtrada a Python                         | Alto          | Resuelto: Python únicamente realiza conversión de tipos y presentación en consola; inferencia en Prolog. |
+| Inestabilidad ante listas vacías o valores desconocidos | Medio         | Resuelto: Reglas de fallback y predicados de suficiencia en Prolog garantizan terminación limpia.        |
