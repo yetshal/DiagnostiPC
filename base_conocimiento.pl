@@ -1,0 +1,325 @@
+%% =============================================================================
+%% DiagnostiPC - Base de Conocimiento
+%% Sistema Experto de Diagnóstico de Hardware de PC
+%% Versión 1.0
+%% =============================================================================
+
+:- use_module(library(lists)).
+
+%% =============================================================================
+%% SECCIÓN 1: HECHOS BASE - SÍNTOMAS CONOCIDOS
+%% =============================================================================
+%% Cada síntoma válido que el sistema puede reconocer y procesar.
+
+sintoma_valido(pantalla_azul).
+sintoma_valido(reinicios_aleatorios).
+sintoma_valido(sobrecalentamiento).
+sintoma_valido(throttling).
+sintoma_valido(errores_memoria).
+sintoma_valido(artefactos_graficos).
+sintoma_valido(pantalla_negra).
+sintoma_valido(no_arranca).
+sintoma_valido(pitidos_bios).
+sintoma_valido(rendimiento_lento).
+sintoma_valido(disco_no_detectado).
+sintoma_valido(ruidos_disco).
+sintoma_valido(voltaje_inestable).
+sintoma_valido(apagado_brusco).
+sintoma_valido(puertos_usb_fallan).
+sintoma_valido(fps_bajos).
+sintoma_valido(temperatura_alta_gpu).
+sintoma_valido(errores_io).
+sintoma_valido(corrupcion_datos).
+sintoma_valido(ventilador_no_gira).
+
+%% =============================================================================
+%% SECCIÓN 2: HECHOS BASE - COMPONENTES Y SUS SÍNTOMAS ASOCIADOS
+%% =============================================================================
+%% Relación entre cada componente y los síntomas que puede provocar.
+
+componente_sintoma(cpu, sobrecalentamiento).
+componente_sintoma(cpu, reinicios_aleatorios).
+componente_sintoma(cpu, throttling).
+componente_sintoma(cpu, rendimiento_lento).
+componente_sintoma(cpu, pantalla_azul).
+
+componente_sintoma(ram, pantalla_azul).
+componente_sintoma(ram, errores_memoria).
+componente_sintoma(ram, reinicios_aleatorios).
+componente_sintoma(ram, no_arranca).
+componente_sintoma(ram, rendimiento_lento).
+
+componente_sintoma(gpu, artefactos_graficos).
+componente_sintoma(gpu, pantalla_negra).
+componente_sintoma(gpu, fps_bajos).
+componente_sintoma(gpu, temperatura_alta_gpu).
+componente_sintoma(gpu, pantalla_azul).
+
+componente_sintoma(disco, disco_no_detectado).
+componente_sintoma(disco, ruidos_disco).
+componente_sintoma(disco, rendimiento_lento).
+componente_sintoma(disco, errores_io).
+componente_sintoma(disco, corrupcion_datos).
+
+componente_sintoma(fuente, voltaje_inestable).
+componente_sintoma(fuente, apagado_brusco).
+componente_sintoma(fuente, reinicios_aleatorios).
+componente_sintoma(fuente, no_arranca).
+componente_sintoma(fuente, puertos_usb_fallan).
+
+componente_sintoma(placa_madre, pitidos_bios).
+componente_sintoma(placa_madre, no_arranca).
+componente_sintoma(placa_madre, puertos_usb_fallan).
+componente_sintoma(placa_madre, reinicios_aleatorios).
+componente_sintoma(placa_madre, errores_io).
+
+componente_sintoma(enfriamiento, sobrecalentamiento).
+componente_sintoma(enfriamiento, ventilador_no_gira).
+componente_sintoma(enfriamiento, throttling).
+componente_sintoma(enfriamiento, reinicios_aleatorios).
+
+%% =============================================================================
+%% SECCIÓN 3: HECHOS BASE - PATRONES DE FALLA
+%% =============================================================================
+%% Cada patrón de falla define el conjunto mínimo de síntomas que lo identifican.
+
+patron_falla(falla_critica_cpu,    [sobrecalentamiento, reinicios_aleatorios, throttling, rendimiento_lento]).
+patron_falla(falla_ram,            [pantalla_azul, errores_memoria, reinicios_aleatorios]).
+patron_falla(falla_gpu,            [artefactos_graficos, fps_bajos, temperatura_alta_gpu]).
+patron_falla(falla_disco,          [disco_no_detectado, ruidos_disco, errores_io]).
+patron_falla(falla_fuente,         [voltaje_inestable, apagado_brusco, reinicios_aleatorios]).
+patron_falla(falla_placa_madre,    [pitidos_bios, no_arranca, puertos_usb_fallan]).
+patron_falla(falla_enfriamiento,   [sobrecalentamiento, ventilador_no_gira, throttling]).
+patron_falla(degradacion_disco,    [rendimiento_lento, corrupcion_datos, errores_io]).
+patron_falla(inestabilidad_fuente, [voltaje_inestable, reinicios_aleatorios, apagado_brusco]).
+
+%% =============================================================================
+%% SECCIÓN 4: HECHOS BASE - SEVERIDAD DE DIAGNÓSTICOS
+%% =============================================================================
+%% Nivel de severidad: bajo < medio < alto < critico
+
+severidad_diagnostico(falla_critica_cpu,    critico).
+severidad_diagnostico(falla_ram,            alto).
+severidad_diagnostico(falla_gpu,            alto).
+severidad_diagnostico(falla_disco,          critico).
+severidad_diagnostico(falla_fuente,         critico).
+severidad_diagnostico(falla_placa_madre,    critico).
+severidad_diagnostico(falla_enfriamiento,   medio).
+severidad_diagnostico(degradacion_disco,    medio).
+severidad_diagnostico(inestabilidad_fuente, alto).
+severidad_diagnostico(rendimiento_general,  bajo).
+
+%% =============================================================================
+%% SECCIÓN 5: HECHOS BASE - EXCLUSIONES MUTUAS
+%% =============================================================================
+%% excluye(DiagA, DiagB): si DiagA aplica, no emitir DiagB simultáneamente.
+
+excluye(falla_critica_cpu,    rendimiento_general).
+excluye(falla_critica_cpu,    falla_enfriamiento).
+excluye(falla_ram,            falla_critica_cpu).
+excluye(falla_fuente,         inestabilidad_fuente).
+excluye(falla_disco,          degradacion_disco).
+
+%% Síntomas considerados críticos para conteo especial.
+sintoma_critico(pantalla_azul).
+sintoma_critico(no_arranca).
+sintoma_critico(voltaje_inestable).
+sintoma_critico(apagado_brusco).
+sintoma_critico(corrupcion_datos).
+sintoma_critico(disco_no_detectado).
+sintoma_critico(pitidos_bios).
+
+%% =============================================================================
+%% NIVEL 1: REGLAS DE VALIDACIÓN PRELIMINAR
+%% =============================================================================
+
+%% sintoma_en_lista/2
+%% Verdadero si Sintoma pertenece a ListaSintomas Y es un síntoma conocido.
+sintoma_en_lista(Sintoma, ListaSintomas) :-
+    member(Sintoma, ListaSintomas),
+    sintoma_valido(Sintoma).
+
+%% lista_contiene_minimo/3
+%% Verdadero si ListaSintomas contiene al menos N elementos de Requeridos.
+lista_contiene_minimo(ListaSintomas, Requeridos, N) :-
+    include(contiene_sintoma(ListaSintomas), Requeridos, Presentes),
+    length(Presentes, Cuenta),
+    Cuenta >= N.
+
+%% Auxiliar: comprueba si Sintoma está en la lista.
+contiene_sintoma(Lista, Sintoma) :-
+    member(Sintoma, Lista).
+
+%% es_sintoma_critico/1
+%% Verdadero si el síntoma tiene clasificación crítica.
+es_sintoma_critico(Sintoma) :-
+    sintoma_critico(Sintoma).
+
+%% sintomas_del_componente/2
+%% Obtiene todos los síntomas asociados a un componente.
+sintomas_del_componente(Componente, Sintomas) :-
+    findall(S, componente_sintoma(Componente, S), Sintomas).
+
+%% subconjunto_valido/2
+%% Filtra una lista dejando solo los síntomas válidos.
+subconjunto_valido([], []).
+subconjunto_valido([H|T], [H|Validos]) :-
+    sintoma_valido(H), !,
+    subconjunto_valido(T, Validos).
+subconjunto_valido([_|T], Validos) :-
+    subconjunto_valido(T, Validos).
+
+%% =============================================================================
+%% NIVEL 2: REGLAS DE INFERENCIA INTERMEDIA
+%% =============================================================================
+
+%% patron_presente/2
+%% Verdadero si los síntomas del patrón están presentes en ListaSintomas.
+%% Requiere al menos 2 de los 3 síntomas del patrón para activarse.
+patron_presente(Patron, ListaSintomas) :-
+    patron_falla(Patron, SintomasPatron),
+    length(SintomasPatron, Total),
+    Minimo is max(2, Total - 1),
+    lista_contiene_minimo(ListaSintomas, SintomasPatron, Minimo).
+
+%% componente_sospechoso/2
+%% Sospecha de un componente si al menos 2 de sus síntomas están presentes.
+componente_sospechoso(Componente, ListaSintomas) :-
+    sintomas_del_componente(Componente, SintomasComp),
+    lista_contiene_minimo(ListaSintomas, SintomasComp, 2).
+
+%% diagnostico_excluido/2
+%% Verdadero si el diagnóstico está excluido por algún otro diagnóstico
+%% ya establecido para la misma lista de síntomas.
+diagnostico_excluido(Diagnostico, ListaSintomas) :-
+    excluye(OtroDiag, Diagnostico),
+    patron_presente(OtroDiag, ListaSintomas).
+
+%% tiene_sintomas_suficientes/2
+%% Verifica que la lista no esté vacía y tenga al menos 2 síntomas válidos.
+tiene_sintomas_suficientes(ListaSintomas) :-
+    subconjunto_valido(ListaSintomas, Validos),
+    length(Validos, N),
+    N >= 2.
+
+%% componente_dominante/2
+%% Determina el componente con más síntomas presentes en la lista.
+componente_dominante(ListaSintomas, Componente) :-
+    findall(
+        Cuenta-Comp,
+        (
+            member(Comp, [cpu, ram, gpu, disco, fuente, placa_madre, enfriamiento]),
+            sintomas_del_componente(Comp, SC),
+            include(contiene_sintoma(ListaSintomas), SC, Match),
+            length(Match, Cuenta),
+            Cuenta > 0
+        ),
+        Pares
+    ),
+    Pares \= [],
+    max_par(Pares, _-Componente).
+
+%% max_par/2 — obtiene el par con mayor clave numérica.
+max_par([X], X) :- !.
+max_par([H|T], Max) :-
+    max_par(T, MaxT),
+    H = N1-_,
+    MaxT = N2-_,
+    ( N1 >= N2 -> Max = H ; Max = MaxT ).
+
+%% =============================================================================
+%% NIVEL 3: REGLAS DE CONCLUSIÓN FINAL
+%% =============================================================================
+
+%% diagnostico_posible/3
+%% Genera un diagnóstico posible dado un patrón, una lista de síntomas
+%% y un componente objetivo (puede ser 'cualquiera' para no filtrar).
+diagnostico_posible(Patron, ListaSintomas, _Componente) :-
+    patron_presente(Patron, ListaSintomas),
+    tiene_sintomas_suficientes(ListaSintomas),
+    \+ diagnostico_excluido(Patron, ListaSintomas).
+
+%% diagnosticar_todos/3
+%% +ListaSintomas, +Componente, -Diagnosticos
+%% Recopila todos los diagnósticos posibles en una lista de pares Diag-Severidad.
+%% El parámetro Componente puede ser 'cualquiera' para no filtrar por componente.
+diagnosticar_todos(ListaSintomas, _Componente, Diagnosticos) :-
+    findall(
+        Diag-Sev,
+        (
+            patron_falla(Diag, _),
+            diagnostico_posible(Diag, ListaSintomas, _),
+            severidad_diagnostico(Diag, Sev)
+        ),
+        DiagsBrutos
+    ),
+    list_to_set(DiagsBrutos, Diagnosticos).
+
+%% diagnosticar_todos/3 - caso base: lista vacía o sin síntomas suficientes.
+%% (cut para evitar ambigüedad cuando la lista está vacía)
+diagnosticar_todos(ListaSintomas, _Componente, []) :-
+    \+ tiene_sintomas_suficientes(ListaSintomas), !.
+
+%% severidad_caso/2
+%% +Diagnostico, -Nivel
+%% Devuelve el nivel de severidad de un diagnóstico.
+severidad_caso(Diagnostico, Nivel) :-
+    severidad_diagnostico(Diagnostico, Nivel), !.
+severidad_caso(_, desconocido).
+
+%% componente_afectado/2
+%% +ListaSintomas, -Componente
+%% Infiere qué componente es el más probable causante de los síntomas.
+componente_afectado(ListaSintomas, Componente) :-
+    tiene_sintomas_suficientes(ListaSintomas),
+    componente_dominante(ListaSintomas, Componente), !.
+componente_afectado(_, desconocido).
+
+%% =============================================================================
+%% PREDICADOS DE LISTAS Y UTILIDADES
+%% =============================================================================
+
+%% validar_sintomas/2
+%% +Lista, -Validos
+%% Filtra la lista de entrada dejando únicamente síntomas reconocidos.
+validar_sintomas(Lista, Validos) :-
+    subconjunto_valido(Lista, Validos).
+
+%% conteo_sintomas_criticos/2
+%% +Lista, -Conteo
+%% Cuenta cuántos síntomas críticos hay en la lista de entrada.
+conteo_sintomas_criticos(Lista, Conteo) :-
+    include(es_sintoma_critico, Lista, Criticos),
+    length(Criticos, Conteo).
+
+%% include/3 con predicado de orden superior (es_sintoma_critico).
+%% SWI-Prolog ya provee include/3, pero necesitamos el wrapper de aridad 2.
+:- meta_predicate include(1, +, -).
+
+%% todos_los_sintomas/1
+%% Devuelve la lista completa de síntomas válidos.
+todos_los_sintomas(Lista) :-
+    findall(S, sintoma_valido(S), Lista).
+
+%% diagnostico_describe/2
+%% Texto descriptivo para cada diagnóstico (para reportes).
+diagnostico_describe(falla_critica_cpu,
+    'El procesador presenta falla crítica por sobrecalentamiento y throttling severo.').
+diagnostico_describe(falla_ram,
+    'La memoria RAM presenta errores que causan BSOD y reinicios aleatorios.').
+diagnostico_describe(falla_gpu,
+    'La tarjeta gráfica falla produciendo artefactos, bajo FPS y alta temperatura.').
+diagnostico_describe(falla_disco,
+    'El disco duro/SSD no es detectado o presenta ruidos y errores de E/S.').
+diagnostico_describe(falla_fuente,
+    'La fuente de poder entrega voltaje inestable causando apagados y reinicios.').
+diagnostico_describe(falla_placa_madre,
+    'La placa madre falla: pitidos POST, no arranca, puertos USB inoperables.').
+diagnostico_describe(falla_enfriamiento,
+    'El sistema de enfriamiento es deficiente: ventilador parado y throttling.').
+diagnostico_describe(degradacion_disco,
+    'El disco presenta degradación progresiva con corrupción y errores de E/S.').
+diagnostico_describe(inestabilidad_fuente,
+    'La fuente genera inestabilidad de voltaje con reinicios y apagados esporádicos.').
+diagnostico_describe(rendimiento_general,
+    'Rendimiento general degradado sin falla crítica identificada.').

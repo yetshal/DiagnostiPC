@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+
+# Editor / SO
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Salidas locales (la evidencia que se entrega SÍ se versiona en evidencia/)
+*.log
+*.tmp
