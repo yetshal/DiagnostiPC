@@ -1,10 +1,11 @@
 """
 pruebas.py
 ==========
-Suite de pruebas para DiagnostiPC.
+Suite de pruebas para DiagnostiPC (Entregables 1 y 2).
 
-Ejecuta 5 casos de prueba que verifican el comportamiento del motor
-de inferencia y muestran cada resultado en una tabla formateada en consola.
+Ejecuta 7 casos de prueba que verifican el comportamiento del motor
+de inferencia, la trazabilidad de explicabilidad ("¿Por qué?") y el
+módulo de recomendación/desempate ("¿Qué falta?").
 
 Casos:
   1. Diagnóstico único claro         (RAM con síntomas canónicos)
@@ -12,6 +13,8 @@ Casos:
   3. Exclusión mutua (\\+ y !)        (síntomas de enfriamiento → excluye CPU)
   4. Datos insuficientes (borde)     (síntoma único, sin diagnóstico posible)
   5. Lista vacía (borde)             (entrada vacía, manejo elegante)
+  6. Explicabilidad "¿Por qué?"      (hechos verdaderos, reglas N1-N3 y descartes)
+  7. Recomendación "¿Qué falta?"     (hipótesis parciales y síntoma de desempate)
 """
 
 from __future__ import annotations
@@ -35,7 +38,6 @@ RESET  = "\033[0m"
 def fila(etiqueta: str, valor: str) -> str:
     """Formatea una fila de tabla con etiqueta y valor."""
     contenido = f"  {etiqueta:<11}: {valor}"
-    # truncar si excede el ancho disponible
     max_val = ANCHO - 14
     if len(valor) > max_val:
         valor = valor[: max_val - 3] + "..."
@@ -57,17 +59,14 @@ def resultado_str(resultado) -> str:
         if not resultado:
             return "[]"
         if isinstance(resultado[0], dict):
-            partes = [f"{r['diagnostico']} ({r['severidad']})" for r in resultado]
-            return ", ".join(partes)
+            if "diagnostico" in resultado[0] and "severidad" in resultado[0]:
+                partes = [f"{r['diagnostico']} ({r['severidad']})" for r in resultado]
+                return ", ".join(partes)
+            if "diagnostico" in resultado[0] and "tipo" in resultado[0]:
+                partes = [f"{r['diagnostico']}:{r['tipo']}" for r in resultado]
+                return ", ".join(partes)
         return str(resultado)
     return str(resultado)
-
-
-def verificar(obtenido, esperado_fn) -> tuple[bool, str]:
-    """Evalúa si el resultado cumple la condición esperada."""
-    ok = esperado_fn(obtenido)
-    estado = f"{VERDE}PASS{RESET}" if ok else f"{ROJO}FAIL{RESET}"
-    return ok, estado
 
 
 def imprimir_caso(
@@ -164,8 +163,6 @@ def main() -> None:
     # CASO 3: Exclusión mutua (\+ y !)
     # -----------------------------------------------------------------------
     total += 1
-    # Síntomas de enfriamiento puro: el patrón falla_critica_cpu TAMBIÉN
-    # matchea parcialmente pero es excluido porque falla_enfriamiento lo excluye.
     sintomas_3 = ["sobrecalentamiento", "ventilador_no_gira", "throttling"]
     resultado_3 = motor.consultar_diagnosticos(sintomas_3)
     diagnosticos_3 = {r["diagnostico"] for r in resultado_3}
@@ -195,9 +192,9 @@ def main() -> None:
     validos_4   = motor.validar_sintomas(sintomas_4)
     criticos_4  = motor.contar_sintomas_criticos(sintomas_4)
     ok_4 = (
-        resultado_4 == []          # sin diagnóstico con 1 síntoma
-        and validos_4 == ["pantalla_azul"]  # el síntoma sí es válido
-        and criticos_4 == 1        # es crítico
+        resultado_4 == []
+        and validos_4 == ["pantalla_azul"]
+        and criticos_4 == 1
     )
     if ok_4:
         pasados += 1
@@ -238,6 +235,62 @@ def main() -> None:
         esperado="diags=[], válidos=[], componente=desconocido, críticos=0",
         obtenido=f"diags={resultado_5}, válidos={validos_5}, comp={componente_5}, críticos={criticos_5}",
         ok=ok_5,
+    )
+
+    # -----------------------------------------------------------------------
+    # CASO 6: Explicabilidad "¿Por qué?" (Entregable 2)
+    # -----------------------------------------------------------------------
+    total += 1
+    sintomas_6 = ["pantalla_azul", "errores_memoria", "reinicios_aleatorios"]
+    exp_6 = motor.explicar_diagnostico("falla_ram", sintomas_6)
+    descartadas_6 = motor.obtener_hipotesis_descartadas(sintomas_6)
+    descartados_nombres = {d["diagnostico"] for d in descartadas_6}
+    ok_6 = (
+        len(exp_6["hechos_verdaderos"]) == 3
+        and any("Nivel 1" in r for r in exp_6["reglas_disparadas"])
+        and any("Nivel 2" in r for r in exp_6["reglas_disparadas"])
+        and any("Nivel 3" in r for r in exp_6["reglas_disparadas"])
+        and "falla_critica_cpu" in descartados_nombres
+    )
+    if ok_6:
+        pasados += 1
+    imprimir_caso(
+        n=6,
+        titulo="Explicabilidad '¿Por qué?' (Caja Blanca)",
+        objetivo="Auditar traza: 3 hechos verdaderos, reglas N1->N3 y descarte de CPU",
+        entrada=str(sintomas_6),
+        consulta="explicar_diagnostico + obtener_hipotesis_descartadas",
+        esperado="3 hechos, reglas N1-N3 activas, falla_critica_cpu descartada",
+        obtenido=f"hechos={len(exp_6['hechos_verdaderos'])}, reglas={len(exp_6['reglas_disparadas'])}, descartadas={len(descartadas_6)}",
+        ok=ok_6,
+    )
+
+    # -----------------------------------------------------------------------
+    # CASO 7: Recomendación de Desempate "¿Qué falta?" (Entregable 2)
+    # -----------------------------------------------------------------------
+    total += 1
+    sintomas_7 = ["sobrecalentamiento"]
+    parciales_7 = motor.obtener_hipotesis_parciales(sintomas_7)
+    recom_7 = motor.recomendar_siguiente_sintoma(sintomas_7)
+    parciales_nombres = {p["diagnostico"] for p in parciales_7}
+    ok_7 = (
+        "falla_critica_cpu" in parciales_nombres
+        and "falla_enfriamiento" in parciales_nombres
+        and recom_7 is not None
+        and recom_7["sintoma_sugerido"] == "throttling"
+    )
+    if ok_7:
+        pasados += 1
+    sug_str = f"{recom_7['sintoma_sugerido']} ({recom_7['motivo']})" if recom_7 else "None"
+    imprimir_caso(
+        n=7,
+        titulo="Recomendación '¿Qué falta?' (Desempate)",
+        objetivo="Síntoma parcial sobrecalentamiento → detecta CPU y Enfriamiento, sugiere throttling",
+        entrada=str(sintomas_7),
+        consulta="obtener_hipotesis_parciales + recomendar_siguiente_sintoma",
+        esperado="parciales=[cpu, enfriamiento], sugerido=throttling",
+        obtenido=sug_str,
+        ok=ok_7,
     )
 
     # -----------------------------------------------------------------------

@@ -323,3 +323,217 @@ diagnostico_describe(inestabilidad_fuente,
     'La fuente genera inestabilidad de voltaje con reinicios y apagados esporádicos.').
 diagnostico_describe(rendimiento_general,
     'Rendimiento general degradado sin falla crítica identificada.').
+
+
+%% =============================================================================
+%% SECCIÓN 11: MÓDULO DE EXPLICABILIDAD ("CAJA BLANCA" / ¿POR QUÉ?)
+%% =============================================================================
+%% Permite auditar el razonamiento lógico del sistema experto en tres aspectos:
+%% 1. Hechos verdaderos comprobados (síntomas que unifican con el patrón).
+%% 2. Reglas disparadas en los 3 niveles lógicos (N1 -> N2 -> N3).
+%% 3. Hipótesis alternativas descartadas y su justificación (falta de evidencia o \+).
+%% =============================================================================
+
+%% hechos_comprobados/3
+%% +Diagnostico, +ListaSintomas, -HechosVerdaderos
+%% % Fuente: S1, T1
+%% Obtiene los síntomas provistos por el usuario que unifican con el patrón del diagnóstico.
+hechos_comprobados(Diagnostico, ListaSintomas, HechosVerdaderos) :-
+    patron_falla(Diagnostico, SintomasPatron),
+    include(contiene_sintoma(ListaSintomas), SintomasPatron, HechosVerdaderos).
+
+%% regla_disparada/4
+%% +Nivel, +Diagnostico, +ListaSintomas, -Descripcion
+%% Deduce qué reglas se activaron en cada nivel de inferencia.
+%% Nivel 1: hechos y síntomas validados individualmente.
+regla_disparada(1, Diagnostico, ListaSintomas, Regla) :-
+    hechos_comprobados(Diagnostico, ListaSintomas, Hechos),
+    member(S, Hechos),
+    format(atom(Regla), 'sintoma_valido(~w) comprobado como hecho verdadero', [S]).
+
+%% Nivel 2: patrones presentes y confirmación de subsistema.
+regla_disparada(2, Diagnostico, ListaSintomas, Regla) :-
+    patron_presente(Diagnostico, ListaSintomas),
+    format(atom(Regla), 'patron_presente(~w) satisface umbral minimo de activacion', [Diagnostico]).
+
+regla_disparada(2, Diagnostico, ListaSintomas, Regla) :-
+    hechos_comprobados(Diagnostico, ListaSintomas, Hechos),
+    member(S, Hechos),
+    componente_sintoma(Comp, S),
+    componente_sospechoso(Comp, ListaSintomas),
+    format(atom(Regla), 'componente_sospechoso(~w) confirmado con >= 2 sintomas observados', [Comp]).
+
+regla_disparada(2, Diagnostico, ListaSintomas, Regla) :-
+    % Justificación de \+: seguro porque Diagnostico y ListaSintomas están ligados.
+    % Excluye ramas donde otro diagnóstico inhibe al actual por regla de exclusión mutua.
+    \+ diagnostico_excluido(Diagnostico, ListaSintomas),
+    format(atom(Regla), 'no_excluido(~w) sin inhibiciones activas de exclusion mutua', [Diagnostico]).
+
+%% Nivel 3: conclusión y dictamen final.
+regla_disparada(3, Diagnostico, ListaSintomas, Regla) :-
+    diagnostico_posible(Diagnostico, ListaSintomas, _),
+    severidad_diagnostico(Diagnostico, Sev),
+    format(atom(Regla), 'diagnostico_posible(~w, severidad: ~w) activado exitosamente', [Diagnostico, Sev]).
+
+%% reglas_disparadas/3
+%% +Diagnostico, +ListaSintomas, -ReglasOrdenadas
+%% Recolecta la lista de reglas disparadas en orden N1 -> N2 -> N3 sin duplicados.
+reglas_disparadas(Diagnostico, ListaSintomas, ReglasOrdenadas) :-
+    findall(
+        Nivel-Texto,
+        regla_disparada(Nivel, Diagnostico, ListaSintomas, Texto),
+        Pares
+    ),
+    list_to_set(Pares, ParesUnicos),
+    keysort(ParesUnicos, ParesOrdenados),
+    formatear_reglas(ParesOrdenados, ReglasOrdenadas).
+
+formatear_reglas([], []).
+formatear_reglas([N-Txt | T], [Formateada | Resto]) :-
+    format(atom(Formateada), 'Nivel ~w: ~w', [N, Txt]),
+    formatear_reglas(T, Resto).
+
+%% hipotesis_descartada/4
+%% +ListaSintomas, -Diagnostico, -TipoDescarte, -Detalle
+%% % Fuente: S1, T1
+%% Identifica diagnósticos que compartían síntomas con la entrada pero no concluyeron.
+%% Caso A: Descartado por regla de exclusión mutua (\+).
+hipotesis_descartada(ListaSintomas, Diagnostico, exclusion_mutua, Detalle) :-
+    patron_falla(Diagnostico, _),
+    excluye(DiagCausante, Diagnostico),
+    patron_presente(DiagCausante, ListaSintomas),
+    format(atom(Detalle), 'Inhibido por exclusion mutua ante presencia confirmada de ~w', [DiagCausante]).
+
+%% Caso B: Descartado por evidencia insuficiente (comparte síntomas pero no alcanza el umbral de activación).
+hipotesis_descartada(ListaSintomas, Diagnostico, falta_evidencia, Detalle) :-
+    patron_falla(Diagnostico, SintomasPatron),
+    % Justificación de \+: seguro porque Diagnostico y ListaSintomas están ligados.
+    % Excluye diagnósticos ya excluidos por Caso A o que hayan concluido con éxito.
+    \+ diagnostico_excluido(Diagnostico, ListaSintomas),
+    \+ diagnostico_posible(Diagnostico, ListaSintomas, _),
+    include(contiene_sintoma(ListaSintomas), SintomasPatron, Presentes),
+    Presentes \= [],
+    subtract(SintomasPatron, Presentes, Faltantes),
+    atomic_list_concat(Faltantes, ', ', FaltantesStr),
+    atomic_list_concat(Presentes, ', ', PresentesStr),
+    format(atom(Detalle), 'Evidencia insuficiente: presentes [~w], requiere al menos [~w]', [PresentesStr, FaltantesStr]).
+
+%% hipotesis_descartadas/2
+%% +ListaSintomas, -Descartadas
+%% Recolecta todas las hipótesis alternativas descartadas para la lista de síntomas.
+hipotesis_descartadas(ListaSintomas, Descartadas) :-
+    findall(
+        descarte(Diag, Tipo, Detalle),
+        hipotesis_descartada(ListaSintomas, Diag, Tipo, Detalle),
+        Brutas
+    ),
+    list_to_set(Brutas, Descartadas).
+
+%% =============================================================================
+%% SECCIÓN 12: MÓDULO DE RECOMENDACIÓN ("¿QUÉ FALTA?" / CONSULTA DE DESEMPATE)
+%% =============================================================================
+%% % Fuente: S1, S2, T1
+%% Evalúa las hipótesis parcialmente activas y determina qué síntoma adicional
+%% tiene mayor peso y capacidad de discriminación para desempatar o confirmar.
+%% =============================================================================
+
+%% peso_severidad/2: asigna puntuación según severidad para priorizar fallas graves
+peso_severidad(critico, 40).
+peso_severidad(alto,    30).
+peso_severidad(medio,   20).
+peso_severidad(bajo,    10).
+peso_severidad(_,        0).
+
+%% hipotesis_parcial/5
+%% +ListaSintomas, -Diag, -Coincidentes, -Faltantes, -Total
+%% Identifica diagnósticos activos parcialmente que aún no concluyen.
+%% Requiere que al menos un síntoma observado esté presente en el patrón.
+hipotesis_parcial(ListaSintomas, Diag, Coincidentes, Faltantes, Total) :-
+    ListaSintomas \= [],
+    patron_falla(Diag, Requeridos),
+    % Justificación de \+: seguro porque Diag y ListaSintomas están ligados.
+    % Excluye diagnósticos ya concluidos o excluidos.
+    \+ diagnostico_excluido(Diag, ListaSintomas),
+    \+ diagnostico_posible(Diag, ListaSintomas, _),
+    include(contiene_sintoma(ListaSintomas), Requeridos, Coincidentes),
+    Coincidentes \= [],
+    subtract(Requeridos, Coincidentes, Faltantes),
+    Faltantes \= [],
+    length(Requeridos, Total).
+
+%% hipotesis_parciales/2
+%% +ListaSintomas, -ListaParciales
+%% Retorna la lista de términos parcial(Diag, Coincidentes, Faltantes, Total).
+hipotesis_parciales(ListaSintomas, ListaParciales) :-
+    findall(
+        parcial(Diag, Coinc, Falt, Tot),
+        hipotesis_parcial(ListaSintomas, Diag, Coinc, Falt, Tot),
+        Brutas
+    ),
+    list_to_set(Brutas, ListaParciales).
+
+%% peso_sintoma_candidato/4
+%% +Sintoma, +ListaSintomas, +HipotesisParciales, -PesoTotal
+%% Calcula el peso de un síntoma candidato no ingresado:
+%% - Síntoma crítico (+50 pts)
+%% - Severidad de las hipótesis beneficiadas (+10 a +40 pts)
+%% - Bono por desempate multi-hipótesis (+20 pts por cada hipótesis que ayuda)
+peso_sintoma_candidato(Sintoma, _ListaSintomas, HipotesisParciales, PesoTotal) :-
+    ( es_sintoma_critico(Sintoma) -> PtsCrit = 50 ; PtsCrit = 0 ),
+    findall(
+        PtsHip,
+        (
+            member(parcial(Diag, _, Faltantes, _), HipotesisParciales),
+            member(Sintoma, Faltantes),
+            severidad_diagnostico(Diag, Sev),
+            peso_severidad(Sev, PtsSev),
+            PtsHip is PtsSev + 20
+        ),
+        PuntosLista
+    ),
+    sum_list(PuntosLista, PtsHips),
+    PtsHips > 0,
+    PesoTotal is PtsCrit + PtsHips.
+
+%% sintoma_desempate/4
+%% +ListaSintomas, -SintomaSugerido, -HipotesisBeneficiadas, -Motivo
+%% Determina qué síntoma no ingresado tiene mayor peso para desempatar o confirmar.
+sintoma_desempate(ListaSintomas, SintomaSugerido, HipotesisBeneficiadas, Motivo) :-
+    ListaSintomas \= [],
+    hipotesis_parciales(ListaSintomas, Parciales),
+    Parciales \= [],
+    findall(
+        S,
+        (
+            member(parcial(_, _, Faltantes, _), Parciales),
+            member(S, Faltantes),
+            \+ member(S, ListaSintomas)
+        ),
+        CandidatosBrutos
+    ),
+    list_to_set(CandidatosBrutos, Candidatos),
+    Candidatos \= [],
+    findall(
+        Peso-Sint,
+        (
+            member(Sint, Candidatos),
+            peso_sintoma_candidato(Sint, ListaSintomas, Parciales, Peso)
+        ),
+        ParesPesos
+    ),
+    ParesPesos \= [],
+    max_par(ParesPesos, _MaxPeso-SintomaSugerido),
+    findall(
+        Diag,
+        (
+            member(parcial(Diag, _, Falt, _), Parciales),
+            member(SintomaSugerido, Falt)
+        ),
+        HipotesisBeneficiadas
+    ),
+    atomic_list_concat(HipotesisBeneficiadas, ', ', HipsStr),
+    ( es_sintoma_critico(SintomaSugerido) ->
+        format(atom(Motivo), 'Sintoma critico de alta prioridad; desempata y aproxima: ~w', [HipsStr])
+    ;
+        format(atom(Motivo), 'Mayor peso diferencial; desempata y aproxima: ~w', [HipsStr])
+    ).

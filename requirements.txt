@@ -1,0 +1,3 @@
+# DiagnostiPC - Dependencias del Proyecto (Entregable 2)
+pyswip>=0.3.3
+streamlit>=1.30.0

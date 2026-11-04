@@ -221,6 +221,132 @@ class MotorInferencia:
         return conteo
 
     # ------------------------------------------------------------------
+    # Métodos de Explicabilidad y Recomendación (Entregable 2 - Caja Blanca)
+    # ------------------------------------------------------------------
+
+    def explicar_diagnostico(self, diagnostico: str, sintomas: list[str]) -> dict:
+        """
+        Obtiene la justificación lógica paso a paso para un diagnóstico emitido:
+        - Hechos verdaderos comprobados (síntomas que unifican con el patrón)
+        - Reglas disparadas en los tres niveles de inferencia (N1 -> N2 -> N3).
+        """
+        resultado = {
+            "diagnostico": diagnostico,
+            "hechos_verdaderos": [],
+            "reglas_disparadas": [],
+        }
+        if not sintomas:
+            return resultado
+        try:
+            q = (
+                f"hechos_comprobados({diagnostico}, {self._lista_pl(sintomas)}, H), "
+                f"reglas_disparadas({diagnostico}, {self._lista_pl(sintomas)}, R)"
+            )
+            for sol in self._prolog.query(q):
+                resultado["hechos_verdaderos"] = [_atom_str(s) for s in sol.get("H", [])]
+                resultado["reglas_disparadas"] = [_atom_str(r) for r in sol.get("R", [])]
+                break
+        except Exception as exc:
+            print(f"[MotorInferencia] Error en explicar_diagnostico: {exc}")
+        return resultado
+
+    def obtener_hipotesis_descartadas(self, sintomas: list[str]) -> list[dict]:
+        """
+        Retorna las hipótesis evaluadas pero descartadas para la lista de síntomas dada,
+        especificando si fue por exclusión mutua (\\+) o por falta de evidencia.
+        """
+        descartadas = []
+        if not sintomas:
+            return descartadas
+        try:
+            q = f"hipotesis_descartada({self._lista_pl(sintomas)}, Diag, Tipo, Detalle)"
+            for sol in self._prolog.query(q):
+                descartadas.append({
+                    "diagnostico": _atom_str(sol["Diag"]),
+                    "tipo": _atom_str(sol["Tipo"]),
+                    "detalle": _atom_str(sol["Detalle"]),
+                })
+        except Exception as exc:
+            print(f"[MotorInferencia] Error en obtener_hipotesis_descartadas: {exc}")
+        return descartadas
+
+    def obtener_hipotesis_parciales(self, sintomas: list[str]) -> list[dict]:
+        """
+        Retorna las hipótesis que presentan síntomas coincidentes pero aún no
+        alcanzan el umbral de activación suficiente.
+        """
+        if not sintomas:
+            return []
+        parciales = []
+        try:
+            q = f"hipotesis_parcial({self._lista_pl(sintomas)}, Diag, Coinc, Falt, Tot)"
+            for sol in self._prolog.query(q):
+                coinc = [_atom_str(s) for s in sol.get("Coinc", [])]
+                falt = [_atom_str(s) for s in sol.get("Falt", [])]
+                tot = int(sol.get("Tot", 1))
+                parciales.append({
+                    "diagnostico": _atom_str(sol["Diag"]),
+                    "coincidentes": coinc,
+                    "faltantes": falt,
+                    "total_requeridos": tot,
+                    "progreso": round((len(coinc) / max(1, tot)) * 100, 1),
+                })
+        except Exception as exc:
+            print(f"[MotorInferencia] Error en obtener_hipotesis_parciales: {exc}")
+        return parciales
+
+    def recomendar_siguiente_sintoma(self, sintomas: list[str]) -> Optional[dict]:
+        """
+        Consulta en Prolog el síntoma no ingresado que tiene mayor peso para
+        desempatar o aproximar la conclusión de una hipótesis diagnóstica.
+        """
+        if not sintomas:
+            return None
+        try:
+            q = f"sintoma_desempate({self._lista_pl(sintomas)}, Sugerido, Hips, Motivo)"
+            for sol in self._prolog.query(q):
+                return {
+                    "sintoma_sugerido": _atom_str(sol["Sugerido"]),
+                    "hipotesis_beneficiadas": [_atom_str(h) for h in sol.get("Hips", [])],
+                    "motivo": _atom_str(sol["Motivo"]),
+                }
+        except Exception as exc:
+            print(f"[MotorInferencia] Error en recomendar_siguiente_sintoma: {exc}")
+        return None
+
+    def obtener_catalogo_sintomas(self) -> list[str]:
+        """Devuelve el catálogo completo de todos los síntomas válidos."""
+        sintomas = []
+        try:
+            for sol in self._prolog.query("todos_los_sintomas(Lista)"):
+                sintomas = sorted([_atom_str(s) for s in sol.get("Lista", [])])
+                break
+        except Exception as exc:
+            print(f"[MotorInferencia] Error en obtener_catalogo_sintomas: {exc}")
+        return sintomas
+
+    def obtener_sintomas_por_componente(self) -> dict[str, list[str]]:
+        """Mapea cada componente de hardware con su lista de síntomas asociados."""
+        mapping = {}
+        try:
+            for sol in self._prolog.query("componente_sintoma(Comp, Sintoma)"):
+                comp = _atom_str(sol["Comp"])
+                sint = _atom_str(sol["Sintoma"])
+                mapping.setdefault(comp, []).append(sint)
+        except Exception as exc:
+            print(f"[MotorInferencia] Error en obtener_sintomas_por_componente: {exc}")
+        return mapping
+
+    def obtener_descripcion_diagnostico(self, diagnostico: str) -> str:
+        """Consulta en Prolog el texto descriptivo asociado al diagnóstico."""
+        try:
+            for sol in self._prolog.query(f"diagnostico_describe({diagnostico}, Desc)"):
+                return _atom_str(sol.get("Desc", ""))
+        except Exception as exc:
+            print(f"[MotorInferencia] Error en obtener_descripcion_diagnostico: {exc}")
+        return ""
+
+    # ------------------------------------------------------------------
     # Utilidades internas
     # ------------------------------------------------------------------
 

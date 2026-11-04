@@ -19,6 +19,18 @@
 
 ---
 
+### Sesión 3 · 2026-11-04 · F5-Entregable 2
+
+- **Persona / agente:** Pareja / Antigravity AI (Gemini 3.8 Flash)
+- **Hecho:** Implementación del Entregable 2: Módulos de Explicabilidad ("¿Por qué?") y Recomendación ("¿Qué falta?") en Prolog (`base_conocimiento.pl`), puente en `motor_inferencia.py`, interfaz Streamlit (`main.py`) con callbacks seguros (`on_click`/`on_change`) para prevenir errores de instanciación de widgets; guardia de lista vacía en desempate (exige al menos 1 síntoma); suite de 7 casos al 100% PASS.
+- **Pruebas:** `.venv\Scripts\python.exe pruebas.py` → 7/7 PASS (100%); `main.py` validado.
+- **Commits:** Pendiente (Entregable 2 completo y robusto).
+- **Tiempo:** ~1.7 h
+- **Correcciones humanas a la IA:** Corrección de flujo de Streamlit (`StreamlitWidgetAlreadyInstantiatedError`) mediante callbacks y control de lista vacía en recomendación.
+- **Siguiente:** Grabación o demostración de DiagnostiPC.
+
+---
+
 ### Sesión 2 · 2026-10-21 · F4-05
 
 - **Persona / agente:** Pareja / Antigravity AI

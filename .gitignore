@@ -14,3 +14,5 @@ Thumbs.db
 # Salidas locales (la evidencia que se entrega SÍ se versiona en evidencia/)
 *.log
 *.tmp
+
+guion_video*.md
