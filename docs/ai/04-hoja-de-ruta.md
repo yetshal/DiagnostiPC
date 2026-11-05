@@ -7,6 +7,18 @@
 
 ---
 
+## F6 · Entregable 3 — DCG en Prolog, Modo Experto en Caliente y Pre-procesamiento Numérico
+
+- [x] **F6-01** · Gramática de Cláusulas Definidas (DCG) en Prolog — Predicado `extraer_sintomas_dcg/2`, lexicón de frases compuestas, sinónimos técnicos y filtrado de ruido/conectores. — _AC:_ Extracción exacta de síntomas canónicos desde secuencias de átomos. — _Resp.:_ K
+- [x] **F6-02** · Adquisición Dinámica y Persistencia en Prolog — Predicados dinámicos `:- dynamic`, predicado `registrar_diagnostico_dinamico/5` y persistencia estructurada al final de `base_conocimiento.pl`. — _AC:_ Inyección en memoria viva vía `assertz/1` y supervivencia tras reinicio. — _Resp.:_ K
+- [x] **F6-03** · Pre-procesador Numérico Híbrido (`preprocesador_numerico.py`) — Discretización continua de telemetría de PC (temperaturas, voltajes, FPS, latencias) mediante heurística estándar ATX y clasificador Scikit-learn (`DecisionTreeClassifier`). — _AC:_ Discretización determinista a hechos simbólicos. — _Resp.:_ I
+- [x] **F6-04** · Adaptación del Puente PySwip en `motor_inferencia.py` — Métodos `procesar_texto_libre()`, `adquirir_nuevo_diagnostico()`, `obtener_diagnosticos_registrados()` y `discretizar_telemetria()`. — _AC:_ Tokenización y serialización segura sin excepciones. — _Resp.:_ I
+- [x] **F6-05** · Interfaz Interactiva Evolucionada en `main.py` — Expansores de entrada por lenguaje natural (DCG) y telemetría de sensores; pestaña dedicada "Modo Experto (Adquisición Dinámica)". — _AC:_ Operatividad 100% en Streamlit. — _Resp.:_ I
+- [x] **F6-06** · Ampliación de Suite de Pruebas en `pruebas.py` — Casos 8 (DCG), 9 (assertz en memoria), 10 (persistencia .pl) y 11 (telemetría ML). — _AC:_ 11/11 casos en estado PASS (100%). — _Resp.:_ I
+- [x] **F6-07** · Sincronización de Documentación Técnica — Actualización de `requirements.txt`, `README.md`, `03-diccionario-predicados.md`, `07-decisiones.md` y bitácoras. — _AC:_ Documentación sincronizada. — _Resp.:_ K+I
+
+---
+
 ## F5 · Entregable 2 — Puente PySwip y Motor de Explicabilidad ("Caja Blanca")
 
 - [x] **F5-01** · Motor Simbólico de Explicabilidad en Prolog — Predicados `hechos_comprobados/3`, `regla_disparada/4`, `reglas_disparadas/3` e `hipotesis_descartada/4` (`\+` y falta de evidencia). — _AC:_ Traza exacta en 3 niveles N1 $\to$ N2 $\to$ N3. — _Resp.:_ K

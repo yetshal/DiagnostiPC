@@ -14,10 +14,13 @@ Dependencias:
 from __future__ import annotations
 
 import os
+import re
+import unicodedata
 from pathlib import Path
 from typing import Optional
 
 from pyswip import Prolog, Atom, Functor, Variable, Query
+from preprocesador_numerico import PreprocesadorTelemetria
 
 # ---------------------------------------------------------------------------
 # Ruta absoluta a la base de conocimiento (misma carpeta que este módulo)
@@ -73,6 +76,24 @@ def _prolog_list(items: list[str]) -> list[Atom]:
     return [Atom(s) for s in items]
 
 
+def normalizar_texto_a_tokens(texto: str) -> list[str]:
+    """
+    Normaliza un texto en lenguaje natural para la gramática DCG en Prolog:
+    - Convierte a minúsculas.
+    - Elimina tildes y diacríticos (á -> a, etc.).
+    - Reemplaza signos de puntuación y caracteres especiales por espacios.
+    - Retorna lista de palabras/tokens.
+    """
+    if not texto or not texto.strip():
+        return []
+    t_sin_acentos = "".join(
+        c for c in unicodedata.normalize("NFD", texto)
+        if unicodedata.category(c) != "Mn"
+    )
+    t_limpio = t_sin_acentos.lower()
+    return re.findall(r"[a-z0-9_]+", t_limpio)
+
+
 class MotorInferencia:
     """
     Motor de inferencia de DiagnostiPC.
@@ -98,6 +119,7 @@ class MotorInferencia:
         self._prolog = Prolog()
         # consultar con ruta absoluta evita problemas de directorio de trabajo
         self._prolog.consult(str(_KB_PATH))
+        self._telemetria = PreprocesadorTelemetria()
 
     # ------------------------------------------------------------------
     # Métodos públicos
@@ -315,15 +337,16 @@ class MotorInferencia:
         return None
 
     def obtener_catalogo_sintomas(self) -> list[str]:
-        """Devuelve el catálogo completo de todos los síntomas válidos."""
-        sintomas = []
+        """Devuelve el catálogo completo de todos los síntomas válidos (sin duplicados)."""
+        sintomas: set[str] = set()
         try:
             for sol in self._prolog.query("todos_los_sintomas(Lista)"):
-                sintomas = sorted([_atom_str(s) for s in sol.get("Lista", [])])
+                for s in sol.get("Lista", []):
+                    sintomas.add(_atom_str(s))
                 break
         except Exception as exc:
             print(f"[MotorInferencia] Error en obtener_catalogo_sintomas: {exc}")
-        return sintomas
+        return sorted(list(sintomas))
 
     def obtener_sintomas_por_componente(self) -> dict[str, list[str]]:
         """Mapea cada componente de hardware con su lista de síntomas asociados."""
@@ -345,6 +368,154 @@ class MotorInferencia:
         except Exception as exc:
             print(f"[MotorInferencia] Error en obtener_descripcion_diagnostico: {exc}")
         return ""
+
+    # ------------------------------------------------------------------
+    # Métodos de Procesamiento de Lenguaje Natural y Aprendizaje (Entregable 3)
+    # ------------------------------------------------------------------
+
+    def procesar_texto_libre(self, texto: str) -> list[str]:
+        """
+        Analiza un texto en lenguaje natural usando la gramática DCG de Prolog
+        y extrae los síntomas simbólicos reconocidos.
+
+        Parameters
+        ----------
+        texto: Cadena de texto libre ingresada por el usuario.
+
+        Returns
+        -------
+        Lista de identificadores de síntomas reconocidos (sin duplicados).
+        """
+        tokens = normalizar_texto_a_tokens(texto)
+        if not tokens:
+            return []
+        sintomas: list[str] = []
+        try:
+            q = f"extraer_sintomas_dcg({self._lista_pl(tokens)}, Sintomas)"
+            for sol in self._prolog.query(q):
+                raw = sol.get("Sintomas", [])
+                sintomas = [_atom_str(s) for s in raw]
+                break
+        except Exception as exc:
+            print(f"[MotorInferencia] Error en procesar_texto_libre: {exc}")
+        return sintomas
+
+    def adquirir_nuevo_diagnostico(
+        self,
+        id_diag: str,
+        componente: str,
+        severidad: str,
+        sintomas: list[str],
+        descripcion: str,
+        persistir: bool = True,
+    ) -> dict:
+        """
+        Inyecta en caliente un nuevo diagnóstico en la base de conocimiento Prolog
+        mediante assertz/1 y lo persiste al final de base_conocimiento.pl.
+
+        Parameters
+        ----------
+        id_diag:      Identificador del diagnóstico (alfanumérico snake_case).
+        componente:   Componente físico afectado (ej. 'cpu', 'gpu', 'ram', etc.).
+        severidad:    Nivel de severidad ('bajo', 'medio', 'alto', 'critico').
+        sintomas:     Lista de síntomas que componen el patrón de falla.
+        descripcion:  Texto explicativo del diagnóstico.
+        persistir:    Si True, escribe las cláusulas a disco en base_conocimiento.pl.
+
+        Returns
+        -------
+        Diccionario con el resultado de la operación: {'ok': bool, 'id': str, 'mensaje': str}.
+        """
+        # Sanitizar y normalizar identificadores a formato átomo de Prolog
+        diag_clean = re.sub(r"[^a-z0-9_]", "_", id_diag.strip().lower())
+        comp_clean = re.sub(r"[^a-z0-9_]", "_", componente.strip().lower())
+        sev_clean = severidad.strip().lower()
+        if sev_clean not in {"bajo", "medio", "alto", "critico"}:
+            sev_clean = "medio"
+
+        sintomas_limpios = [
+            re.sub(r"[^a-z0-9_]", "_", s.strip().lower())
+            for s in sintomas if s.strip()
+        ]
+        if not diag_clean or not sintomas_limpios:
+            return {
+                "ok": False,
+                "id": diag_clean,
+                "mensaje": "El ID del diagnóstico y al menos un síntoma son obligatorios.",
+            }
+
+        desc_escaped = descripcion.replace("'", "''").strip()
+        if not desc_escaped:
+            desc_escaped = f"Diagnostico adquirido en caliente para {comp_clean}"
+
+        # 1. Inyección en memoria viva mediante SWI-Prolog
+        try:
+            q = (
+                f"registrar_diagnostico_dinamico({diag_clean}, {comp_clean}, {sev_clean}, "
+                f"{self._lista_pl(sintomas_limpios)}, '{desc_escaped}')"
+            )
+            # Consumir la consulta para efectuar el assertz
+            for _ in self._prolog.query(q):
+                break
+        except Exception as exc:
+            return {
+                "ok": False,
+                "id": diag_clean,
+                "mensaje": f"Error al inyectar regla en Prolog: {exc}",
+            }
+
+        # 2. Persistencia en disco (base_conocimiento.pl)
+        if persistir and _KB_PATH.exists():
+            try:
+                content = _KB_PATH.read_text(encoding="utf-8")
+                # Evitar escribir duplicados si el diagnóstico ya está persistido en el archivo
+                if f"patron_falla({diag_clean}," not in content:
+                    bloque_pl = (
+                        f"\n%% [DINAMICO - ADQUIRIDO EN CALIENTE: {diag_clean}]\n"
+                        f"patron_falla({diag_clean}, {self._lista_pl(sintomas_limpios)}).\n"
+                        f"severidad_diagnostico({diag_clean}, {sev_clean}).\n"
+                        f"diagnostico_describe({diag_clean}, '{desc_escaped}').\n"
+                    )
+                    for s in sintomas_limpios:
+                        if f"componente_sintoma({comp_clean}, {s})" not in content:
+                            bloque_pl += f"componente_sintoma({comp_clean}, {s}).\n"
+                        if f"sintoma_valido({s})" not in content:
+                            bloque_pl += f"sintoma_valido({s}).\n"
+
+                    with open(_KB_PATH, "a", encoding="utf-8") as f:
+                        f.write(bloque_pl)
+            except Exception as exc:
+                return {
+                    "ok": True,
+                    "id": diag_clean,
+                    "mensaje": f"Regla inyectada en memoria pero ocurrió un error al persistir a disco: {exc}",
+                }
+
+        return {
+            "ok": True,
+            "id": diag_clean,
+            "mensaje": f"Diagnóstico '{diag_clean}' inyectado exitosamente en memoria viva y persistido en base_conocimiento.pl.",
+        }
+
+    def obtener_diagnosticos_registrados(self) -> list[str]:
+        """Devuelve la lista de todos los diagnósticos registrados en la base (estáticos y dinámicos)."""
+        diags: list[str] = []
+        try:
+            for sol in self._prolog.query("patron_falla(Diag, _)"):
+                d = _atom_str(sol["Diag"])
+                if d not in diags:
+                    diags.append(d)
+        except Exception as exc:
+            print(f"[MotorInferencia] Error en obtener_diagnosticos_registrados: {exc}")
+        return sorted(diags)
+
+    def discretizar_telemetria(
+        self, datos_telemetria: dict[str, float], usar_ml: bool = True
+    ) -> list[str]:
+        """
+        Convierte variables continuas de sensores a hechos simbólicos de síntomas.
+        """
+        return self._telemetria.discretizar(datos_telemetria, usar_ml=usar_ml)
 
     # ------------------------------------------------------------------
     # Utilidades internas

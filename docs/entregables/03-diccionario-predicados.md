@@ -1,6 +1,6 @@
 # Diccionario de predicados
 
-DiagnostiPC — Entregable 1 y Entregable 2
+DiagnostiPC — Entregables 1, 2 y 3
 
 > Documento oficial de referencia del sistema DiagnostiPC.
 > Modos de instanciación: `+Arg` entrada (enviada desde Python o ligada) · `-Arg` salida (unificada hacia Python o hacia otra regla) · `?Arg` bidireccional.
@@ -25,6 +25,8 @@ DiagnostiPC — Entregable 1 y Entregable 2
 | `hipotesis_parcial/5`        | `hipotesis_parcial(+ListaSintomas, -Diag, -Coinc, -Falt, -Tot)`               | Consulta hipótesis que comparten síntomas observados pero no alcanzan el umbral de activación (evidencia incompleta).                                                                                                                                                                                                                      | `motor.obtener_hipotesis_parciales(sint)`      |
 | `hipotesis_parciales/2`      | `hipotesis_parciales(+ListaSintomas, -ListaParciales)`                        | Agrupa todas las hipótesis parciales en términos estructurados `parcial/4`.                                                                                                                                                                                                                                                                | `motor.obtener_hipotesis_parciales(sint)`      |
 | `sintoma_desempate/4`        | `sintoma_desempate(+ListaSintomas, -Sintoma, -Hips, -Motivo)`                 | Evalúa los síntomas faltantes de las hipótesis en competencia y selecciona mediante ponderación el síntoma de mayor peso para desempatar o confirmar.                                                                                                                                                                                      | `motor.recomendar_siguiente_sintoma(sint)`     |
+| `extraer_sintomas_dcg/2`     | `extraer_sintomas_dcg(+Tokens, -Sintomas)`                                    | Analiza sintácticamente una lista de átomos tokenizados mediante una Gramática de Cláusulas Definidas (DCG), filtrando conectores y ruido léxico para extraer los hechos simbólicos reconocidos.                                                                                                                                             | `motor.procesar_texto_libre(texto)`           |
+| `registrar_diagnostico_dinamico/5` | `registrar_diagnostico_dinamico(+Id, +Comp, +Sev, +Sints, +Desc)`       | Registra un nuevo diagnóstico en la memoria viva de Prolog (`assertz/1`), enlazando el patrón de falla, severidad, descripción y pertenencia de síntomas al componente.                                                                                                                                                                    | `motor.adquirir_nuevo_diagnostico(...)`       |
 
 ---
 

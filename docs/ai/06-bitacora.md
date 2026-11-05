@@ -19,6 +19,18 @@
 
 ---
 
+### Sesión 4 · 2026-11-05 · F6-Entregable 3
+
+- **Persona / agente:** Pareja / Antigravity AI (Gemini 3.8 Flash)
+- **Hecho:** Entregable 3 completado: Gramática DCG en Prolog (`extraer_sintomas_dcg/2`), panel de Modo Experto para inyección en caliente (`assertz/1`) con persistencia dual estructurada en `base_conocimiento.pl`, pre-procesador híbrido de telemetría continua a hechos discretos con Scikit-learn (`DecisionTreeClassifier`) y heurística ATX (`preprocesador_numerico.py`), interfaz Streamlit (`main.py`) con expansores NL/telemetría y 4 pestañas; suite de pruebas ampliada a 11 casos al 100% PASS.
+- **Pruebas:** `.venv\Scripts\python.exe pruebas.py` → 11/11 PASS (100%); `swipl` limpio (código 0).
+- **Commits:** Pendiente (Entregable 3 completo).
+- **Tiempo:** ~1.2 h
+- **Correcciones humanas a la IA:** Ninguna mayor; resolución de redefinición de `apply:include/3` e inclusión de `:- discontiguous`.
+- **Siguiente:** Video-demostración o sustanciación del Entregable 3.
+
+---
+
 ### Sesión 3 · 2026-11-04 · F5-Entregable 2
 
 - **Persona / agente:** Pareja / Antigravity AI (Gemini 3.8 Flash)

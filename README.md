@@ -7,16 +7,16 @@ Sistema experto auditable ("Caja Blanca") para el diagnóstico de fallas de hard
 - **Institución:** Fundación Escuela Tecnológica de Neiva (FET), sede Rivera-Huila
 - **Docente:** Juan José Ramos Díaz
 - **Integrantes:** Juan Carlos Bastidas Bernal & Julian Alfonso Montero Trujillo
-- **Entregable Actual:** Entregable 2 — Puente Python–PySwip y Motor de Explicabilidad ("Caja Blanca")
+- **Entregable Actual:** Entregable 3 — Procesamiento de Lenguaje Natural (DCG), Aprendizaje Dinámico en Caliente y Pre-procesamiento Numérico Híbrido
 
 ---
 
 ## Estado del Proyecto
 
-- **Fase:** Entregable 2 — Puente PySwip, Motor de Explicabilidad ("Caja Blanca") e Interfaz Gráfica Interactiva.
-- **Implementación:** 100% operativa, conectada en tiempo real a Prolog sin llamadas bloqueantes `read/1`.
-- **Base de Conocimiento:** 66 hechos base estructurados (aridad 2) y 27 reglas encadenadas en 3 niveles estrictos con módulos de trazabilidad y recomendación.
-- **Pruebas:** 7/7 casos de prueba pasando con éxito (100% PASS), cubriendo casos normales, exclusión mutua, datos insuficientes, lista vacía, explicabilidad paso a paso y recomendación ponderada de desempate.
+- **Fase:** Entregable 3 — DCG en Prolog, Modo Experto (`assertz/1` + persistencia) y Telemetría Numérica (Scikit-Learn).
+- **Implementación:** 100% operativa, conectada bidireccionalmente a SWI-Prolog y Streamlit.
+- **Base de Conocimiento:** 66 hechos base estructurados, 27 reglas encadenadas en 3 niveles, analizador gramatical DCG (`extraer_sintomas_dcg/2`) y persistencia de reglas dinámicas.
+- **Pruebas:** 11/11 casos de prueba pasando con éxito (100% PASS), cubriendo lenguaje natural libre, inyección en caliente en memoria viva, supervivencia de reglas tras reinicio y clasificación de telemetría de sensores.
 
 ---
 
@@ -24,14 +24,19 @@ Sistema experto auditable ("Caja Blanca") para el diagnóstico de fallas de hard
 
 DiagnostiPC recibe los síntomas y observaciones reportadas por el usuario y proporciona una evaluación integral y auditable:
 
-1. **Diagnóstico Concluyente y Severidad:** Identifica el componente dominante afectado y emite diagnósticos con su nivel de criticidad (`critico`, `alto`, `medio`, `bajo`).
-2. **Explicabilidad Simbólica ("¿Por qué?"):**
+1. **Entrada por Lenguaje Natural con DCG (Prolog):** El usuario describe libremente las fallas en texto abierto; una gramática DCG en Prolog filtra ruido, analiza sintácticamente las frases y extrae los síntomas canónicos.
+2. **Pre-procesamiento Numérico Híbrido:** Sensores continuos de hardware (temperatura CPU/GPU en °C, caídas de voltaje de riel 12V, FPS promedio, latencias de disco en ms) se discretizan a hechos simbólicos mediante un clasificador Scikit-learn (`DecisionTreeClassifier`) y heurísticas ATX.
+3. **Diagnóstico Concluyente y Severidad:** Identifica el componente dominante afectado y emite diagnósticos con su nivel de criticidad (`critico`, `alto`, `medio`, `bajo`).
+4. **Explicabilidad Simbólica ("¿Por qué?"):**
    - **Hechos comprobados:** Síntomas validados positivamente contra los patrones canónicos.
    - **Reglas disparadas:** Árbol secuencial de reglas activadas en 3 niveles (Nivel 1 $\to$ Nivel 2 $\to$ Nivel 3).
    - **Hipótesis descartadas:** Diagnósticos alternativos evaluados y descartados justificando el motivo (por exclusión mutua `\+` o por falta de evidencia).
-3. **Módulo de Recomendación ("¿Qué falta?"):**
-   - Ante evidencia incompleta o empates entre diagnósticos, Prolog evalúa las hipótesis parcialmente activas y determina qué síntoma adicional tiene mayor prioridad y peso discriminante.
-   - Permite al usuario incorporar la prueba de desempate con un solo clic.
+5. **Módulo de Recomendación ("¿Qué falta?"):**
+   - Ante evidencia incompleta o empates entre diagnósticos, Prolog evalúa las hipótesis parcialmente activas y determina qué síntoma adicional tiene mayor prioridad y peso discriminante para desempate con un clic.
+6. **Modo Experto (Adquisición Dinámica en Caliente):**
+   - Permite a un técnico formular nuevos diagnósticos en tiempo de ejecución.
+   - Inyecta la regla en la memoria lógica viva mediante `assertz/1` (operativa al instante sin reiniciar).
+   - Escribe de forma persistente la regla en `base_conocimiento.pl` para conservar el aprendizaje entre reinicios de la aplicación.
 
 ---
 
@@ -39,11 +44,12 @@ DiagnostiPC recibe los síntomas y observaciones reportadas por el usuario y pro
 
 ```
 .
-├── base_conocimiento.pl        # Base de conocimiento Prolog (66 hechos, 27 reglas en 3 niveles)
+├── base_conocimiento.pl        # Base de conocimiento Prolog (hechos, reglas 3 niveles, DCG y persistencia)
+├── preprocesador_numerico.py   # Pre-procesador híbrido de telemetría (Scikit-learn + Heurística ATX)
 ├── motor_inferencia.py         # Módulo puente Python ↔ SWI-Prolog vía PySwip (consultas tipadas y seguras)
-├── main.py                     # Interfaz gráfica interactiva web desarrollada en Streamlit
-├── pruebas.py                  # Suite de pruebas automatizadas por consola (7 casos, 100% PASS)
-├── requirements.txt            # Dependencias del proyecto (pyswip, streamlit)
+├── main.py                     # Interfaz gráfica interactiva web desarrollada en Streamlit (con Modo Experto)
+├── pruebas.py                  # Suite de pruebas automatizadas por consola (11 casos, 100% PASS)
+├── requirements.txt            # Dependencias del proyecto (pyswip, streamlit, scikit-learn)
 ├── entregable_1_sistema_experto_diagnostipc.md # Documento del Entregable 1
 ├── docs/                       # Documentación técnica y evidencias
 │   ├── entregables/            # Artefactos de entrega del curso

@@ -4,62 +4,62 @@
 
 ## Última actualización
 
-- **Fecha:** 2026-11-04
-- **Fase actual:** F5 / Entregable 2 (Puente Python–PySwip y Motor de Explicabilidad "Caja Blanca")
-- **Estado general:** Implementación 100% completada, suite de 7 pruebas en verde (100% PASS), interfaz gráfica web interactiva con Streamlit (`main.py`) operativa, y documentación técnica sincronizada.
+- **Fecha:** 2026-11-05
+- **Fase actual:** F6 / Entregable 3 (Procesamiento de Lenguaje Natural con DCG, Aprendizaje Dinámico en Caliente y Pre-procesamiento Numérico Híbrido)
+- **Estado general:** Implementación 100% completada, suite de 11 pruebas en verde (100% PASS), interfaz gráfica web interactiva con Streamlit (`main.py`) con Modo Experto y entrada DCG operativa, y documentación técnica sincronizada.
 
 ## Qué se hizo en la sesión de hoy
 
-1. **Implementación de los Módulos de Explicabilidad y Recomendación en Prolog (`base_conocimiento.pl`):**
-   - **Módulo de Explicabilidad ("¿Por qué?"):**
-     - `hechos_comprobados/3`: Deduce los hechos verdaderos que unifican con el patrón canónico del diagnóstico.
-     - `regla_disparada/4` y `reglas_disparadas/3`: Genera la traza paso a paso en 3 niveles de inferencia (N1 $\to$ N2 $\to$ N3).
-     - `hipotesis_descartada/4` e `hipotesis_descartadas/2`: Evalúa y clasifica los diagnósticos alternativos descartados, identificando si fue por exclusión mutua (`\+`) o por falta de evidencia.
-   - **Módulo de Recomendación ("¿Qué falta?"):**
-     - `hipotesis_parcial/5` e `hipotesis_parciales/2`: Detecta hipótesis con evidencia parcial activa.
-     - `peso_sintoma_candidato/4` y `sintoma_desempate/4`: Pondera los síntomas no ingresados según criticidad (+50 pts) y severidad (+10 a +40 pts) para sugerir la prueba de mayor peso discriminante.
-2. **Ampliación del Puente Python en `motor_inferencia.py`:**
-   - Métodos tipados para PySwip: `explicar_diagnostico()`, `obtener_hipotesis_descartadas()`, `obtener_hipotesis_parciales()`, `recomendar_siguiente_sintoma()`, `obtener_catalogo_sintomas()` y `obtener_sintomas_por_componente()`.
-3. **Interfaz Interactiva en `main.py`:**
-   - Desarrollada con Streamlit con layout de pestañas en el área central.
-   - Barra lateral con lista directa de síntomas en contenedor con scroll vertical (sin menús desplegables), con buscador y botón de limpiar fijos arriba.
-   - Esquema de colores original oscuro con tarjetas de fondo translúcido y bordes coloreados según severidad.
-   - Cero emojis en toda la aplicación; tipografía técnica y badges sobrios.
-   - Presets eliminados para una interacción 100% natural y guiada por el usuario.
-   - Título único **DiagnostiPC** con su eslogan directamente debajo.
-   - Arquitectura de callbacks (`on_click` y `on_change`) para mutación segura de checkboxes sin errores de instanciación (`StreamlitWidgetAlreadyInstantiatedError`).
-   - Control de guardas: el módulo de recomendación exige al menos un síntoma ingresado para evaluar desempates entre hipótesis.
-   - Panel de Auditoría ("¿Por qué?") con hechos verdaderos, reglas disparadas N1 a N3 y diagnósticos descartados.
-   - Panel de Recomendación ("¿Qué falta?") con barras de progreso de evidencia y botón directo para agregar el síntoma sugerido.
-4. **Actualización de la Suite de Pruebas (`pruebas.py`):**
-   - Agregados los Casos 6 (Explicabilidad Caja Blanca) y 7 (Recomendación de desempate).
-   - Ejecución 7/7 PASS (100%).
-5. **Actualización de Documentación y Entregables:**
-   - Creado `requirements.txt` con `pyswip` y `streamlit`.
-   - Actualizado `README.md` con las instrucciones del Entregable 2.
-   - Actualizado `docs/entregables/03-diccionario-predicados.md` con los nuevos predicados, aridades y modos.
-   - Registradas decisiones D-021 y D-022 en `docs/ai/07-decisiones.md` y bitácora en `docs/ai/06-bitacora.md`.
+1. **Implementación de la Gramática DCG en Prolog (`base_conocimiento.pl`):**
+   - Directivas dinámicas `:- dynamic` y `:- discontiguous` para los predicados de reglas, diagnósticos y componentes.
+   - Gramática DCG completa (`extraer_sintomas_dcg/2`) con lexicón de frases compuestas, sinónimos técnicos y filtrado recursivo de ruido/conectores (`y`, `ademas`, `tambien`, `con`, `pero`).
+   - Mapeo robusto a los 20 síntomas canónicos del sistema de hardware.
+
+2. **Módulo de Adquisición Dinámica de Conocimiento (Modo Experto):**
+   - Predicado `registrar_diagnostico_dinamico/5` en Prolog para enlazar en memoria viva (`assertz/1`) el patrón de falla, severidad, descripción y componente sin reiniciar.
+   - Persistencia dual en `motor_inferencia.py`: escribe las cláusulas aprendidas al final de `base_conocimiento.pl` dentro de una sección estructurada para asegurar su supervivencia entre reinicios.
+
+3. **Pre-procesador Numérico Híbrido (`preprocesador_numerico.py`):**
+   - Conversión de variables continuas de sensores (temperaturas CPU/GPU en °C, riel de 12V en V, FPS promedio, latencias de almacenamiento en ms y RPM de ventiladores) a hechos simbólicos discretos.
+   - Motor dual:
+     - Clasificador supervisado ligero con Scikit-learn (`DecisionTreeClassifier`).
+     - Heurística determinista basada en tolerancias ATX y especificaciones térmicas Intel/AMD.
+
+4. **Interfaz Interactiva Streamlit (`main.py`):**
+   - Expansor de entrada por Lenguaje Natural libre conectada a la DCG de Prolog.
+   - Expansor de Telemetría Numérica con sliders para sensores y botón de discretización.
+   - Pestaña dedicada "Modo Experto (Adquisición Dinámica)" con formulario completo para dar de alta diagnósticos en caliente, inyección a memoria viva, persistencia y visualización del catálogo registrado.
+
+5. **Suite de Pruebas Automatizadas (`pruebas.py`):**
+   - Ampliada de 7 a 11 casos cubriendo DCG en Prolog (Caso 8), inyección en caliente con `assertz` (Caso 9), persistencia y recarga limpia tras reinicio (Caso 10) y telemetría ML (Caso 11).
+   - Ejecución 11/11 PASS (100%).
+
+6. **Actualización de Documentación:**
+   - Actualizados `requirements.txt`, `README.md`, `docs/entregables/03-diccionario-predicados.md`, `docs/ai/04-hoja-de-ruta.md`, `docs/ai/07-decisiones.md` (D-023, D-024, D-025) y bitácora `06`.
 
 ## Estado del sistema
 
 | Componente                                    | Estado      | Notas                                                                  |
 | --------------------------------------------- | ----------- | ---------------------------------------------------------------------- |
-| Base de conocimiento (`base_conocimiento.pl`) | ✅ Completo | 473 líneas, 66 hechos aridad 2, 27 reglas N1–N3, compila limpio en SWI |
-| Motor de inferencia (`motor_inferencia.py`)   | ✅ Completo | 338 líneas, puente PySwip con métodos de auditoría y desempate         |
-| Interfaz gráfica web (`main.py`)              | ✅ Completo | 273 líneas en Streamlit, ejecución dual (`streamlit run` / `python`)   |
-| Suite de pruebas (`pruebas.py`)               | ✅ Completo | 330 líneas, 7/7 casos pasando en terminal (código 0)                   |
-| Dependencias (`requirements.txt`)             | ✅ Completo | `pyswip>=0.3.3`, `streamlit>=1.30.0`                                   |
-| Diccionario de predicados (`03`)              | ✅ Completo | Actualizado con secciones de Explicabilidad y Recomendación            |
-| Documentación y README                        | ✅ Completo | Actualizado con arquitectura híbrida y guía del Entregable 2           |
+| Base de conocimiento (`base_conocimiento.pl`) | ✅ Completo | 790+ líneas, hechos base, 27 reglas N1–N3, DCG, dinámicos y persistencia |
+| Preprocesador numérico (`preprocesador_numerico.py`) | ✅ Completo | 220 líneas, motor Scikit-Learn y heurística estándar ATX |
+| Motor de inferencia (`motor_inferencia.py`)   | ✅ Completo | 470+ líneas, métodos de DCG, adquisición en caliente y telemetría      |
+| Interfaz gráfica web (`main.py`)              | ✅ Completo | 490+ líneas en Streamlit, 4 pestañas, entrada DCG y panel Modo Experto |
+| Suite de pruebas (`pruebas.py`)               | ✅ Completo | 420+ líneas, 11/11 casos pasando en terminal (código 0)                |
+| Dependencias (`requirements.txt`)             | ✅ Completo | `pyswip>=0.3.3`, `streamlit>=1.30.0`, `scikit-learn>=1.4.0`           |
+| Diccionario de predicados (`03`)              | ✅ Completo | Actualizado con DCG y adquisición en caliente                          |
+| Documentación y README                        | ✅ Completo | Actualizado con guía de Entregables 1, 2 y 3                           |
 
 - **SWI-Prolog:** 10.1.14 (x64-win64)
 - **Python:** 3.14.7 (en `.venv`)
 - **PySwip:** 0.3.3
 - **Streamlit:** 1.66.1
+- **Scikit-Learn:** 1.9.1
 
 ## Próximos pasos sugeridos para el equipo humano
 
-1. Ejecutar localmente `streamlit run main.py` o `python main.py` para visualizar la interfaz web interactiva.
-2. Grabar el video corto de demostración (3 a 5 minutos) o preparar la sustentación en vivo:
-   - **Demostración Caso 1:** Pulsar el botón preset "Caso 1 (Inferencia)" en la barra lateral $\to$ mostrar diagnóstico `falla_ram`, severidad alta $\to$ abrir panel "¿Por qué?" para mostrar los 3 hechos comprobados, las reglas N1-N3 disparadas y las hipótesis descartadas (ej. `falla_critica_cpu` excluida por `\+`).
-   - **Demostración Caso 2:** Pulsar el botón preset "Caso 2 (Desempate)" en la barra lateral $\to$ mostrar advertencia de evidencia insuficiente $\to$ abrir panel "¿Qué falta?" para mostrar las hipótesis en competencia (CPU vs Enfriamiento) $\to$ observar el síntoma sugerido `throttling` $\to$ hacer clic en "➕ Agregar 'throttling' a la consulta" para evidenciar la re-evaluación en tiempo real.
+1. Ejecutar localmente `streamlit run main.py` o `.venv\Scripts\python.exe main.py` para interactuar con las nuevas funciones:
+   - Probar la entrada de texto libre en el expansor DCG: *"El equipo se calienta mucho, la pantalla se pone azul y se reinicia sola"*.
+   - Probar el clasificador de telemetría: subir temperatura a 92°C y bajar voltaje a 11.1V.
+   - Ir a la pestaña **Modo Experto**, registrar un diagnóstico personalizado (ej. `falla_pasta_termica`) y comprobar cómo se evalúa de inmediato y se escribe al archivo `.pl`.
+2. Grabar el video demostrativo o ensayar la sustentación del Entregable 3 cubriendo los 3 requisitos clave del docente.

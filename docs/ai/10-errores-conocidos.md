@@ -61,4 +61,23 @@
 
 ## Errores encontrados durante el desarrollo
 
-_(vacío — numerar desde E-001)_
+### E-001 · Claves de widget duplicadas en Streamlit por hechos dinámicos (`main.py`)
+
+- **Fecha / sesión:** 2026-11-05 / Sesión 4 (Entregable 3)
+- **Síntoma:** `streamlit.errors.StreamlitDuplicateElementKey: There are multiple elements with the same key='chk_apagado_brusco'`.
+- **Causa:** Al inyectar reglas dinámicas en caliente con persistencia, hechos `sintoma_valido(...)` ya existentes se agregaron como duplicados al archivo `.pl`. El predicado `todos_los_sintomas/1` usaba `findall/3` sin deduplicar, generando una lista con elementos repetidos para la que Streamlit intentó instanciar dos checkboxes con la misma clave.
+- **Solución:**
+  1. En `base_conocimiento.pl`: Usar `list_to_set/2` dentro de `todos_los_sintomas/1`.
+  2. En `motor_inferencia.py`: Filtrar con `set` en `obtener_catalogo_sintomas()` y verificar idempotencia antes de escribir a disco en `adquirir_nuevo_diagnostico()`.
+  3. En `main.py`: Sanitizar `todos_sintomas` y `sintomas_a_mostrar` con `list(dict.fromkeys(...))`.
+- **Archivos:** `base_conocimiento.pl`, `motor_inferencia.py`, `main.py`.
+- **Cómo evitarlo:** No confiar en que `findall` devuelva conjuntos únicos; siempre envolver consultas de catálogo con `list_to_set` o deduplicación explícita.
+
+### E-002 · Mutación de estado de sesión posterior a la instanciación de widgets (`main.py`)
+
+- **Fecha / sesión:** 2026-11-05 / Sesión 4 (Entregable 3)
+- **Síntoma:** `streamlit.errors.StreamlitWidgetAlreadyInstantiatedError: st.session_state['chk_...'] cannot be modified after the widget with that key is instantiated`.
+- **Causa:** Modificar valores de claves asociadas a checkboxes (`chk_...`) dentro del cuerpo de evaluación de un botón (`if st.button(...)`), cuando dichos checkboxes ya habían sido renderizados previamente en el sidebar durante esa misma pasada.
+- **Solución:** Mover la lógica de mutación a callbacks nativos (`on_click=cb_interpretar_dcg` y `on_click=cb_aplicar_telemetria`). En Streamlit, las funciones conectadas con `on_click` se ejecutan antes de que cualquier widget comience su renderizado.
+- **Archivos:** `main.py`.
+- **Cómo evitarlo:** Toda acción que cambie el valor de un checkbox o widget controlado por clave debe ejecutarse en un callback `on_click` o `on_change`.

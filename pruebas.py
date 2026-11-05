@@ -1,13 +1,9 @@
 """
 pruebas.py
 ==========
-Suite de pruebas para DiagnostiPC (Entregables 1 y 2).
+Suite de pruebas para DiagnostiPC (Entregables 1, 2 y 3).
 
-Ejecuta 7 casos de prueba que verifican el comportamiento del motor
-de inferencia, la trazabilidad de explicabilidad ("¿Por qué?") y el
-módulo de recomendación/desempate ("¿Qué falta?").
-
-Casos:
+Ejecuta 11 casos de prueba que verifican:
   1. Diagnóstico único claro         (RAM con síntomas canónicos)
   2. Múltiples diagnósticos          (síntomas de RAM + fuente de poder)
   3. Exclusión mutua (\\+ y !)        (síntomas de enfriamiento → excluye CPU)
@@ -15,6 +11,10 @@ Casos:
   5. Lista vacía (borde)             (entrada vacía, manejo elegante)
   6. Explicabilidad "¿Por qué?"      (hechos verdaderos, reglas N1-N3 y descartes)
   7. Recomendación "¿Qué falta?"     (hipótesis parciales y síntoma de desempate)
+  8. DCG - Lenguaje Natural          (extracción sintáctica de síntomas con DCG)
+  9. Adquisición Dinámica Caliente   (inyección en memoria viva con assertz/1)
+  10. Persistencia de Reglas         (supervivencia de reglas tras reinicio limpio)
+  11. Telemetría Numérica Híbrida    (variables continuas a hechos simbólicos)
 """
 
 from __future__ import annotations
@@ -282,15 +282,132 @@ def main() -> None:
     if ok_7:
         pasados += 1
     sug_str = f"{recom_7['sintoma_sugerido']} ({recom_7['motivo']})" if recom_7 else "None"
+    # -----------------------------------------------------------------------
+    # CASO 8: Procesamiento de Lenguaje Natural con DCG (Entregable 3)
+    # -----------------------------------------------------------------------
+    total += 1
+    texto_8 = "El equipo presenta sobrecalentamiento excesivo, la pantalla se pone azul y se reinicia sola"
+    sintomas_dcg_8 = motor.procesar_texto_libre(texto_8)
+    diags_dcg_8 = motor.consultar_diagnosticos(sintomas_dcg_8)
+    ok_8 = (
+        "sobrecalentamiento" in sintomas_dcg_8
+        and "pantalla_azul" in sintomas_dcg_8
+        and "reinicios_aleatorios" in sintomas_dcg_8
+        and any(d["diagnostico"] == "falla_ram" for d in diags_dcg_8)
+    )
+    if ok_8:
+        pasados += 1
     imprimir_caso(
-        n=7,
-        titulo="Recomendación '¿Qué falta?' (Desempate)",
-        objetivo="Síntoma parcial sobrecalentamiento → detecta CPU y Enfriamiento, sugiere throttling",
-        entrada=str(sintomas_7),
-        consulta="obtener_hipotesis_parciales + recomendar_siguiente_sintoma",
-        esperado="parciales=[cpu, enfriamiento], sugerido=throttling",
-        obtenido=sug_str,
-        ok=ok_7,
+        n=8,
+        titulo="Entrada Lenguaje Natural con DCG (Prolog)",
+        objetivo="Texto libre con ruido y conectores → DCG extrae síntomas y emite diagnóstico",
+        entrada=f"\"{texto_8}\"",
+        consulta="procesar_texto_libre + consultar_diagnosticos",
+        esperado="síntomas=[sobrecalentamiento, pantalla_azul, reinicios_aleatorios] → falla_ram",
+        obtenido=f"síntomas={sintomas_dcg_8}, diags={[d['diagnostico'] for d in diags_dcg_8]}",
+        ok=ok_8,
+    )
+
+    # -----------------------------------------------------------------------
+    # CASO 9: Adquisición Dinámica de Conocimiento en Caliente (Entregable 3)
+    # -----------------------------------------------------------------------
+    total += 1
+    id_test_9 = "falla_pasta_termica"
+    res_inyeccion_9 = motor.adquirir_nuevo_diagnostico(
+        id_diag=id_test_9,
+        componente="cpu",
+        severidad="alto",
+        sintomas=["sobrecalentamiento", "throttling"],
+        descripcion="Degradacion termica por pasta seca o disipador mal fijado.",
+        persistir=False,
+    )
+    # Inferencia inmediata en memoria viva
+    diags_9 = motor.consultar_diagnosticos(["sobrecalentamiento", "throttling"])
+    diags_ids_9 = {d["diagnostico"] for d in diags_9}
+    ok_9 = (
+        res_inyeccion_9.get("ok") is True
+        and id_test_9 in diags_ids_9
+    )
+    if ok_9:
+        pasados += 1
+    imprimir_caso(
+        n=9,
+        titulo="Adquisición Dinámica en Caliente (assertz)",
+        objetivo="Inyectar nueva regla en memoria viva → inferencia inmediata sin reiniciar",
+        entrada="id=falla_pasta_termica, sev=alto, síntomas=[sobrecalentamiento, throttling]",
+        consulta="adquirir_nuevo_diagnostico + consultar_diagnosticos([sobrec., thrott.])",
+        esperado="falla_pasta_termica incorporada inmediatamente en la inferencia",
+        obtenido=f"inyectado={res_inyeccion_9.get('ok')}, diagnósticos={[d['diagnostico'] for d in diags_9]}",
+        ok=ok_9,
+    )
+
+    # -----------------------------------------------------------------------
+    # CASO 10: Persistencia de Conocimiento a Disco (Entregable 3)
+    # -----------------------------------------------------------------------
+    total += 1
+    id_test_10 = "falla_vrm_placa"
+    res_inyeccion_10 = motor.adquirir_nuevo_diagnostico(
+        id_diag=id_test_10,
+        componente="placa_madre",
+        severidad="critico",
+        sintomas=["voltaje_inestable", "apagado_brusco"],
+        descripcion="Falla en modulo regulador de voltaje (VRM) de la placa madre.",
+        persistir=True,
+    )
+
+    # Instanciar un motor limpio para comprobar que la regla persiste tras reinicio
+    motor_nuevo = MotorInferencia()
+    diags_10 = motor_nuevo.consultar_diagnosticos(["voltaje_inestable", "apagado_brusco"])
+    diags_ids_10 = {d["diagnostico"] for d in diags_10}
+
+    ok_10 = (
+        res_inyeccion_10.get("ok") is True
+        and id_test_10 in diags_ids_10
+    )
+    if ok_10:
+        pasados += 1
+
+    imprimir_caso(
+        n=10,
+        titulo="Persistencia de Conocimiento (.pl en Disco)",
+        objetivo="Inyectar regla persistente → verificar que sobrevive a una nueva instancia limpia",
+        entrada="id=falla_vrm_placa, persistir=True, síntomas=[voltaje_inestable, apagado_brusco]",
+        consulta="MotorInferencia().consultar_diagnosticos(...) en instancia reiniciada",
+        esperado="falla_vrm_placa persiste y es diagnosticada tras recargar la base",
+        obtenido=f"instancia_nueva_diags={[d['diagnostico'] for d in diags_10]}",
+        ok=ok_10,
+    )
+
+    # -----------------------------------------------------------------------
+    # CASO 11: Pre-procesamiento Numérico Híbrido (Entregable 3)
+    # -----------------------------------------------------------------------
+    total += 1
+    telemetria_11 = {
+        "temperatura_cpu": 93.0,
+        "voltaje_12v": 11.0,
+        "fps_promedio": 19.0,
+        "latencia_disco_ms": 25.0,
+    }
+    sintomas_num_11 = motor.discretizar_telemetria(telemetria_11, usar_ml=True)
+    diags_num_11 = motor.consultar_diagnosticos(sintomas_num_11)
+    ok_11 = (
+        "sobrecalentamiento" in sintomas_num_11
+        and "throttling" in sintomas_num_11
+        and "voltaje_inestable" in sintomas_num_11
+        and "fps_bajos" in sintomas_num_11
+        and len(diags_num_11) > 0
+    )
+    if ok_11:
+        pasados += 1
+    imprimir_caso(
+        n=11,
+        titulo="Pre-procesamiento Numérico Híbrido (ML)",
+        objetivo="Variables continuas (°C, V, FPS) → Clasificador Scikit-Learn discretiza a síntomas",
+        entrada=str(telemetria_11),
+        consulta="discretizar_telemetria(usar_ml=True) + consultar_diagnosticos",
+        esperado="[fps_bajos, sobrecalentamiento, throttling, voltaje_inestable] → diagnósticos activos",
+        obtenido=f"sintomas={sintomas_num_11}, diags={[d['diagnostico'] for d in diags_num_11]}",
+        ok=ok_11,
     )
 
     # -----------------------------------------------------------------------

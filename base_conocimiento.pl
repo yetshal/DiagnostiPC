@@ -5,6 +5,22 @@
 %% =============================================================================
 
 :- use_module(library(lists)).
+:- use_module(library(apply)).
+
+%% Directivas de predicados dinamicos para permitir adquisicion en caliente
+:- dynamic sintoma_valido/1.
+:- dynamic componente_sintoma/2.
+:- dynamic patron_falla/2.
+:- dynamic severidad_diagnostico/2.
+:- dynamic diagnostico_describe/2.
+:- dynamic excluye/2.
+
+%% Cláusulas dinámicas pueden aparecer al final del archivo al persistir
+:- discontiguous sintoma_valido/1.
+:- discontiguous componente_sintoma/2.
+:- discontiguous patron_falla/2.
+:- discontiguous severidad_diagnostico/2.
+:- discontiguous diagnostico_describe/2.
 
 %% =============================================================================
 %% SECCIÓN 1: HECHOS BASE - SÍNTOMAS CONOCIDOS
@@ -294,12 +310,13 @@ conteo_sintomas_criticos(Lista, Conteo) :-
 
 %% include/3 con predicado de orden superior (es_sintoma_critico).
 %% SWI-Prolog ya provee include/3, pero necesitamos el wrapper de aridad 2.
-:- meta_predicate include(1, +, -).
+% meta_predicate removido para compatibilidad con library(apply)
 
 %% todos_los_sintomas/1
 %% Devuelve la lista completa de síntomas válidos.
 todos_los_sintomas(Lista) :-
-    findall(S, sintoma_valido(S), Lista).
+    findall(S, sintoma_valido(S), Brutos),
+    list_to_set(Brutos, Lista).
 
 %% diagnostico_describe/2
 %% Texto descriptivo para cada diagnóstico (para reportes).
@@ -537,3 +554,262 @@ sintoma_desempate(ListaSintomas, SintomaSugerido, HipotesisBeneficiadas, Motivo)
     ;
         format(atom(Motivo), 'Mayor peso diferencial; desempata y aproxima: ~w', [HipsStr])
     ).
+
+%% =============================================================================
+%% SECCIÓN 13: PROCESAMIENTO DE LENGUAJE NATURAL MEDIANTE DCG
+%% =============================================================================
+%% % Fuente: S1, T1
+%% Gramática de Cláusulas Definidas (DCG) que analiza una secuencia de átomos
+%% léxicos ingresados libremente por el usuario y extrae los síntomas canónicos
+%% correspondientes, filtrando palabras de relleno, conectores y verbos.
+%% =============================================================================
+
+%% extraer_sintomas_dcg/2
+%% +Tokens, -Sintomas
+%% Analiza la lista de átomos léxicos mediante la gramática y devuelve la lista
+%% unificada y sin duplicados de síntomas reconocidos.
+extraer_sintomas_dcg(Tokens, Sintomas) :-
+    is_list(Tokens),
+    phrase(analisis_texto_dcg(SintomasBrutos), Tokens),
+    list_to_set(SintomasBrutos, Sintomas), !.
+extraer_sintomas_dcg(_, []).
+
+%% Regla recursiva principal del parser DCG
+analisis_texto_dcg([S | Resto]) -->
+    frase_sintoma(S), !,
+    conector_opcional,
+    analisis_texto_dcg(Resto).
+analisis_texto_dcg(Resto) -->
+    [_PalabraIgnorada],
+    analisis_texto_dcg(Resto).
+analisis_texto_dcg([]) --> [].
+
+%% Conectores y palabras de enlace opcionales
+conector_opcional --> [y], !.
+conector_opcional --> [e], !.
+conector_opcional --> [ademas], !.
+conector_opcional --> [tambien], !.
+conector_opcional --> [o], !.
+conector_opcional --> [con], !.
+conector_opcional --> [pero], !.
+conector_opcional --> [].
+
+%% Lexicón gramatical de síntomas (frases compuestas y sinónimos técnicos)
+%% 1. Pantalla Azul (BSOD)
+frase_sintoma(pantalla_azul) --> [pantalla, de, la, muerte].
+frase_sintoma(pantalla_azul) --> [pantalla, se, pone, azul].
+frase_sintoma(pantalla_azul) --> [pantalla, esta, azul].
+frase_sintoma(pantalla_azul) --> [pantallazo, azul].
+frase_sintoma(pantalla_azul) --> [pantalla, azul].
+frase_sintoma(pantalla_azul) --> [bsod].
+frase_sintoma(pantalla_azul) --> [volcado, de, memoria].
+
+%% 2. Reinicios Aleatorios
+frase_sintoma(reinicios_aleatorios) --> [reinicios, aleatorios].
+frase_sintoma(reinicios_aleatorios) --> [reinicios, constantes].
+frase_sintoma(reinicios_aleatorios) --> [reinicios, continuos].
+frase_sintoma(reinicios_aleatorios) --> [se, apaga, y, prende].
+frase_sintoma(reinicios_aleatorios) --> [se, reinicia, sola].
+frase_sintoma(reinicios_aleatorios) --> [se, reinicia, solo].
+frase_sintoma(reinicios_aleatorios) --> [se, reinicia].
+frase_sintoma(reinicios_aleatorios) --> [reinicio, inesperado].
+frase_sintoma(reinicios_aleatorios) --> [reinicio, aleatorio].
+
+%% 3. Sobrecalentamiento
+frase_sintoma(sobrecalentamiento) --> [calentamiento, excesivo].
+frase_sintoma(sobrecalentamiento) --> [temperatura, muy, alta].
+frase_sintoma(sobrecalentamiento) --> [se, calienta, mucho].
+frase_sintoma(sobrecalentamiento) --> [se, calienta, demasiado].
+frase_sintoma(sobrecalentamiento) --> [se, calienta].
+frase_sintoma(sobrecalentamiento) --> [muy, caliente].
+frase_sintoma(sobrecalentamiento) --> [hirviendo].
+frase_sintoma(sobrecalentamiento) --> [sobrecalentamiento].
+
+%% 4. Throttling
+frase_sintoma(throttling) --> [thermal, throttling].
+frase_sintoma(throttling) --> [bajada, de, reloj].
+frase_sintoma(throttling) --> [frecuencia, reducida].
+frase_sintoma(throttling) --> [estrangulamiento, termico].
+frase_sintoma(throttling) --> [throttling].
+
+%% 5. Errores de Memoria RAM
+frase_sintoma(errores_memoria) --> [errores, de, memoria].
+frase_sintoma(errores_memoria) --> [errores, en, ram].
+frase_sintoma(errores_memoria) --> [falla, en, ram].
+frase_sintoma(errores_memoria) --> [fallos, de, memoria].
+frase_sintoma(errores_memoria) --> [memoria, defectuosa].
+frase_sintoma(errores_memoria) --> [errores_memoria].
+
+%% 6. Artefactos Gráficos
+frase_sintoma(artefactos_graficos) --> [artefactos, graficos].
+frase_sintoma(artefactos_graficos) --> [artefactos, visuales].
+frase_sintoma(artefactos_graficos) --> [glitches, en, pantalla].
+frase_sintoma(artefactos_graficos) --> [lineas, en, pantalla].
+frase_sintoma(artefactos_graficos) --> [distorsion, visual].
+frase_sintoma(artefactos_graficos) --> [glitches].
+
+%% 7. Pantalla Negra
+frase_sintoma(pantalla_negra) --> [sin, senal, de, video].
+frase_sintoma(pantalla_negra) --> [pantalla, en, negro].
+frase_sintoma(pantalla_negra) --> [pantalla, negra].
+frase_sintoma(pantalla_negra) --> [no, da, video].
+frase_sintoma(pantalla_negra) --> [sin, video].
+frase_sintoma(pantalla_negra) --> [monitor, sin, senal].
+
+%% 8. No Arranca
+frase_sintoma(no_arranca) --> [no, completa, el, post].
+frase_sintoma(no_arranca) --> [no, pasa, del, post].
+frase_sintoma(no_arranca) --> [no, arranca].
+frase_sintoma(no_arranca) --> [no, prende].
+frase_sintoma(no_arranca) --> [no, enciende].
+frase_sintoma(no_arranca) --> [no, bootea].
+
+%% 9. Pitidos BIOS
+frase_sintoma(pitidos_bios) --> [pitidos, de, la, bios].
+frase_sintoma(pitidos_bios) --> [pitidos, de, bios].
+frase_sintoma(pitidos_bios) --> [pitidos, al, encender].
+frase_sintoma(pitidos_bios) --> [beeps, de, bios].
+frase_sintoma(pitidos_bios) --> [pitidos, bios].
+frase_sintoma(pitidos_bios) --> [beeps].
+
+%% 10. Rendimiento Lento
+frase_sintoma(rendimiento_lento) --> [pc, muy, lenta].
+frase_sintoma(rendimiento_lento) --> [computadora, lenta].
+frase_sintoma(rendimiento_lento) --> [computador, lento].
+frase_sintoma(rendimiento_lento) --> [sistema, lento].
+frase_sintoma(rendimiento_lento) --> [lentitud, extrema].
+frase_sintoma(rendimiento_lento) --> [rendimiento, lento].
+frase_sintoma(rendimiento_lento) --> [se, congela].
+frase_sintoma(rendimiento_lento) --> [se, traba].
+frase_sintoma(rendimiento_lento) --> [lentitud].
+
+%% 11. Disco No Detectado
+frase_sintoma(disco_no_detectado) --> [no, reconoce, el, disco].
+frase_sintoma(disco_no_detectado) --> [sin, dispositivo, de, arranque].
+frase_sintoma(disco_no_detectado) --> [disco, no, detectado].
+frase_sintoma(disco_no_detectado) --> [disco, no, aparece].
+frase_sintoma(disco_no_detectado) --> [ssd, no, detectado].
+frase_sintoma(disco_no_detectado) --> [disco_no_detectado].
+
+%% 12. Ruidos de Disco
+frase_sintoma(ruidos_disco) --> [chasquidos, en, el, disco].
+frase_sintoma(ruidos_disco) --> [ruidos, en, el, disco].
+frase_sintoma(ruidos_disco) --> [clics, en, el, disco].
+frase_sintoma(ruidos_disco) --> [ruidos, de, disco].
+frase_sintoma(ruidos_disco) --> [ruidos, mecanicos].
+frase_sintoma(ruidos_disco) --> [ruidos, disco].
+
+%% 13. Voltaje Inestable
+frase_sintoma(voltaje_inestable) --> [caidas, de, voltaje].
+frase_sintoma(voltaje_inestable) --> [variaciones, de, voltaje].
+frase_sintoma(voltaje_inestable) --> [fluctuaciones, de, energia].
+frase_sintoma(voltaje_inestable) --> [inestabilidad, de, voltaje].
+frase_sintoma(voltaje_inestable) --> [voltaje_inestable].
+
+%% 14. Apagado Brusco
+frase_sintoma(apagado_brusco) --> [se, apaga, de, golpe].
+frase_sintoma(apagado_brusco) --> [se, apaga, de, repente].
+frase_sintoma(apagado_brusco) --> [corte, de, energia].
+frase_sintoma(apagado_brusco) --> [se, apaga, sola].
+frase_sintoma(apagado_brusco) --> [apagados, bruscos].
+frase_sintoma(apagado_brusco) --> [apagado, brusco].
+
+%% 15. Puertos USB Fallan
+frase_sintoma(puertos_usb_fallan) --> [puertos, usb, sin, energia].
+frase_sintoma(puertos_usb_fallan) --> [no, reconoce, usb].
+frase_sintoma(puertos_usb_fallan) --> [usb, no, funcionan].
+frase_sintoma(puertos_usb_fallan) --> [puertos, usb, fallan].
+frase_sintoma(puertos_usb_fallan) --> [usb, fallan].
+
+%% 16. FPS Bajos
+frase_sintoma(fps_bajos) --> [cuadros, por, segundo, bajos].
+frase_sintoma(fps_bajos) --> [tirones, en, juegos].
+frase_sintoma(fps_bajos) --> [caida, de, fps].
+frase_sintoma(fps_bajos) --> [bajos, fps].
+frase_sintoma(fps_bajos) --> [fps, bajos].
+
+%% 17. Temperatura Alta GPU
+frase_sintoma(temperatura_alta_gpu) --> [temperatura, alta, en, tarjeta, grafica].
+frase_sintoma(temperatura_alta_gpu) --> [temperatura, alta, gpu].
+frase_sintoma(temperatura_alta_gpu) --> [grafica, muy, caliente].
+frase_sintoma(temperatura_alta_gpu) --> [gpu, muy, caliente].
+frase_sintoma(temperatura_alta_gpu) --> [grafica, hirviendo].
+
+%% 18. Errores de Entrada/Salida (I/O)
+frase_sintoma(errores_io) --> [fallos, de, lectura, y, escritura].
+frase_sintoma(errores_io) --> [errores, de, entrada, y, salida].
+frase_sintoma(errores_io) --> [errores, de, io].
+frase_sintoma(errores_io) --> [errores, io].
+
+%% 19. Corrupción de Datos
+frase_sintoma(corrupcion_datos) --> [sistema, de, archivos, danado].
+frase_sintoma(corrupcion_datos) --> [corrupcion, de, datos].
+frase_sintoma(corrupcion_datos) --> [archivos, corruptos].
+frase_sintoma(corrupcion_datos) --> [corrupcion, datos].
+
+%% 20. Ventilador No Gira
+frase_sintoma(ventilador_no_gira) --> [disipador, no, gira].
+frase_sintoma(ventilador_no_gira) --> [ventiladores, no, giran].
+frase_sintoma(ventilador_no_gira) --> [ventilador, no, gira].
+frase_sintoma(ventilador_no_gira) --> [ventilador, parado].
+frase_sintoma(ventilador_no_gira) --> [cooler, detenido].
+frase_sintoma(ventilador_no_gira) --> [cooler, no, gira].
+
+%% =============================================================================
+%% SECCIÓN 14: ADQUISICIÓN DINÁMICA DE CONOCIMIENTO (MODO EXPERTO)
+%% =============================================================================
+%% % Fuente: S1, T1
+%% Permite inyectar en memoria viva nuevos diagnósticos formulados por un
+%% usuario con rol Experto, garantizando consistencia en las relaciones lógicas.
+%% =============================================================================
+
+registrar_diagnostico_dinamico(IdDiag, Componente, Severidad, ListaSintomas, Descripcion) :-
+    assertz(patron_falla(IdDiag, ListaSintomas)),
+    assertz(severidad_diagnostico(IdDiag, Severidad)),
+    assertz(diagnostico_describe(IdDiag, Descripcion)),
+    forall(
+        member(Sintoma, ListaSintomas),
+        (
+            ( componente_sintoma(Componente, Sintoma) -> true ; assertz(componente_sintoma(Componente, Sintoma)) ),
+            ( sintoma_valido(Sintoma) -> true ; assertz(sintoma_valido(Sintoma)) )
+        )
+    ).
+
+%% =============================================================================
+%% SECCIÓN 15: REGLAS ADQUIRIDAS EN CALIENTE (PERSISTENCIA MODO EXPERTO)
+%% =============================================================================
+%% El contenido a continuación de esta línea se añade dinámicamente mediante
+%% el panel Experto de la aplicación y persiste entre reinicios.
+
+
+%% [DINAMICO - ADQUIRIDO EN CALIENTE: falla_vrm_placa]
+patron_falla(falla_vrm_placa, [voltaje_inestable,apagado_brusco]).
+severidad_diagnostico(falla_vrm_placa, critico).
+diagnostico_describe(falla_vrm_placa, 'Falla en modulo regulador de voltaje (VRM) de la placa madre.').
+componente_sintoma(placa_madre, voltaje_inestable).
+sintoma_valido(voltaje_inestable).
+componente_sintoma(placa_madre, apagado_brusco).
+sintoma_valido(apagado_brusco).
+
+%% [DINAMICO - ADQUIRIDO EN CALIENTE: falla_vrm_placa]
+patron_falla(falla_vrm_placa, [voltaje_inestable,apagado_brusco]).
+severidad_diagnostico(falla_vrm_placa, critico).
+diagnostico_describe(falla_vrm_placa, 'Falla en modulo regulador de voltaje (VRM) de la placa madre.').
+componente_sintoma(placa_madre, voltaje_inestable).
+sintoma_valido(voltaje_inestable).
+componente_sintoma(placa_madre, apagado_brusco).
+sintoma_valido(apagado_brusco).
+
+%% [DINAMICO - ADQUIRIDO EN CALIENTE: falla_vrm_placa]
+patron_falla(falla_vrm_placa, [voltaje_inestable,apagado_brusco]).
+severidad_diagnostico(falla_vrm_placa, critico).
+diagnostico_describe(falla_vrm_placa, 'Falla en modulo regulador de voltaje (VRM) de la placa madre.').
+componente_sintoma(placa_madre, voltaje_inestable).
+sintoma_valido(voltaje_inestable).
+componente_sintoma(placa_madre, apagado_brusco).
+sintoma_valido(apagado_brusco).
+
+%% [DINAMICO - ADQUIRIDO EN CALIENTE: falla_pasta_termica]
+patron_falla(falla_pasta_termica, [sobrecalentamiento,throttling]).
+severidad_diagnostico(falla_pasta_termica, alto).
+diagnostico_describe(falla_pasta_termica, 'Degradación del compuesto térmico entre el procesador y el disipador. Se recomienda limpiar con alcohol isopropílico y reaplicar pasta térmica de alta conductividad.').

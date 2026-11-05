@@ -1,3 +1,4 @@
-# DiagnostiPC - Dependencias del Proyecto (Entregable 2)
+# DiagnostiPC - Dependencias del Proyecto (Entregable 3)
 pyswip>=0.3.3
 streamlit>=1.30.0
+scikit-learn>=1.4.0

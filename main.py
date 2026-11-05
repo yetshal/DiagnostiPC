@@ -114,6 +114,62 @@ def cb_limpiar_sintomas(catalogo: list[str]):
         st.session_state[f"chk_{s}"] = False
 
 
+def cb_aplicar_sintomas_extra(nuevos_sintomas: list[str]):
+    """Incorpora una lista de síntomas a los seleccionados y sincroniza sus checkboxes."""
+    for s in nuevos_sintomas:
+        if s not in st.session_state.sintomas_seleccionados:
+            st.session_state.sintomas_seleccionados.append(s)
+        st.session_state[f"chk_{s}"] = True
+
+
+def cb_interpretar_dcg():
+    """Callback seguro para analizar texto libre con DCG antes de instanciar widgets."""
+    texto = st.session_state.get("input_texto_nl", "").strip()
+    if not texto:
+        st.session_state["feedback_dcg"] = ("info", "Por favor escriba una descripción antes de analizar.")
+        return
+    motor = get_motor()
+    sintomas = motor.procesar_texto_libre(texto)
+    if sintomas:
+        for s in sintomas:
+            if s not in st.session_state.sintomas_seleccionados:
+                st.session_state.sintomas_seleccionados.append(s)
+            st.session_state[f"chk_{s}"] = True
+        st.session_state["feedback_dcg"] = ("success", f"DCG reconoció: {', '.join(sintomas)}")
+    else:
+        st.session_state["feedback_dcg"] = ("warning", "No se identificaron síntomas reconocibles en el texto.")
+
+
+def cb_aplicar_telemetria():
+    """Callback seguro para discretizar telemetría numérica antes de instanciar widgets."""
+    t_cpu = float(st.session_state.get("in_t_cpu", 45.0))
+    t_gpu = float(st.session_state.get("in_t_gpu", 50.0))
+    v_12v = float(st.session_state.get("in_v_12v", 12.0))
+    fps = float(st.session_state.get("in_fps", 65.0))
+    lat = float(st.session_state.get("in_lat", 15.0))
+    rpm = float(st.session_state.get("in_rpm", 1500.0))
+    usar_ml = bool(st.session_state.get("in_usar_ml", True))
+
+    datos = {
+        "temperatura_cpu": t_cpu,
+        "temperatura_gpu": t_gpu,
+        "voltaje_12v": v_12v,
+        "fps_promedio": fps,
+        "latencia_disco_ms": lat,
+        "rpm_ventilador": rpm,
+    }
+    motor = get_motor()
+    sintomas = motor.discretizar_telemetria(datos, usar_ml=usar_ml)
+    if sintomas:
+        for s in sintomas:
+            if s not in st.session_state.sintomas_seleccionados:
+                st.session_state.sintomas_seleccionados.append(s)
+            st.session_state[f"chk_{s}"] = True
+        st.session_state["feedback_tele"] = ("success", f"Telemetría discretizada: {', '.join(sintomas)}")
+    else:
+        st.session_state["feedback_tele"] = ("info", "Valores dentro de los parámetros normales de funcionamiento.")
+
+
 def render_app():
     st.set_page_config(
         page_title="DiagnostiPC",
@@ -122,7 +178,7 @@ def render_app():
     )
 
     motor = get_motor()
-    todos_sintomas = motor.obtener_catalogo_sintomas()
+    todos_sintomas = list(dict.fromkeys(motor.obtener_catalogo_sintomas()))
 
     if "sintomas_seleccionados" not in st.session_state:
         st.session_state.sintomas_seleccionados = []
@@ -170,6 +226,8 @@ def render_app():
         else:
             sintomas_a_mostrar = todos_sintomas
 
+        sintomas_a_mostrar = list(dict.fromkeys(sintomas_a_mostrar))
+
         # Contenedor con scroll vertical que ocupa el resto del sidebar
         with st.container(height=580):
             if not sintomas_a_mostrar:
@@ -204,6 +262,71 @@ def render_app():
 
     st.markdown("---")
 
+    # -----------------------------------------------------------------------
+    # Módulos Híbridos de Entrada: Lenguaje Natural (DCG) y Telemetría Numérica
+    # -----------------------------------------------------------------------
+    col_input_a, col_input_b = st.columns(2)
+
+    with col_input_a:
+        with st.expander("Entrada por Lenguaje Natural con DCG (Prolog)", expanded=False):
+            st.caption(
+                "Escriba libremente los problemas que presenta el equipo. "
+                "La gramática DCG de Prolog extraerá los hechos canónicos automáticamente."
+            )
+            st.text_area(
+                "Descripción libre del problema:",
+                placeholder="Ejemplo: La máquina se calienta mucho, la pantalla se congela y se reinicia sola...",
+                height=85,
+                key="input_texto_nl",
+            )
+            st.button(
+                "Interpretar con Gramática DCG",
+                use_container_width=True,
+                type="primary",
+                on_click=cb_interpretar_dcg,
+            )
+            fb_dcg = st.session_state.get("feedback_dcg")
+            if fb_dcg:
+                tipo, msg = fb_dcg
+                if tipo == "success":
+                    st.success(msg)
+                elif tipo == "warning":
+                    st.warning(msg)
+                elif tipo == "info":
+                    st.info(msg)
+
+    with col_input_b:
+        with st.expander("Telemetría Numérica de Sensores (Pre-procesador Híbrido)", expanded=False):
+            st.caption(
+                "Inyecte mediciones continuas de hardware para que el clasificador "
+                "las convierta a hechos simbólicos discretos."
+            )
+            c_t1, c_t2 = st.columns(2)
+            with c_t1:
+                st.number_input("Temp. CPU (°C):", min_value=25.0, max_value=115.0, value=45.0, step=1.0, key="in_t_cpu")
+                st.number_input("Temp. GPU (°C):", min_value=25.0, max_value=115.0, value=50.0, step=1.0, key="in_t_gpu")
+                st.number_input("Riel 12V (V):", min_value=9.0, max_value=14.0, value=12.0, step=0.1, key="in_v_12v")
+            with c_t2:
+                st.number_input("FPS Promedio:", min_value=0.0, max_value=360.0, value=65.0, step=5.0, key="in_fps")
+                st.number_input("Latencia Disco (ms):", min_value=0.1, max_value=2000.0, value=15.0, step=5.0, key="in_lat")
+                st.number_input("RPM Ventilador:", min_value=0.0, max_value=4000.0, value=1500.0, step=100.0, key="in_rpm")
+
+            st.checkbox("Utilizar Clasificador Scikit-Learn (DecisionTree)", value=True, key="in_usar_ml")
+            st.button(
+                "Clasificar Telemetría a Síntomas",
+                use_container_width=True,
+                on_click=cb_aplicar_telemetria,
+            )
+            fb_tele = st.session_state.get("feedback_tele")
+            if fb_tele:
+                tipo, msg = fb_tele
+                if tipo == "success":
+                    st.success(msg)
+                elif tipo == "info":
+                    st.info(msg)
+
+    st.markdown("---")
+
     # Ejecucion de inferencia en Prolog
     diagnosticos = motor.consultar_diagnosticos(sintomas_activos)
     componente_afectado = motor.obtener_componente_afectado(sintomas_activos)
@@ -212,10 +335,11 @@ def render_app():
     recomendacion = motor.recomendar_siguiente_sintoma(sintomas_activos)
 
     # Pestanas de trabajo
-    tab_diag, tab_por_que, tab_que_falta = st.tabs([
+    tab_diag, tab_por_que, tab_que_falta, tab_experto = st.tabs([
         "Dictamen y Diagnosticos",
         "Modulo de Explicabilidad (\"¿Por que?\")",
         "Modulo de Recomendacion (\"¿Que falta?\")",
+        "Modo Experto (Adquisición Dinámica)",
     ])
 
     # -----------------------------------------------------------------------
@@ -390,6 +514,86 @@ def render_app():
         else:
             if sintomas_activos:
                 st.caption("No hay hipotesis con coincidencia parcial pendiente.")
+
+    # -----------------------------------------------------------------------
+    # TAB 4: Modo Experto (Adquisición Dinámica de Conocimiento)
+    # -----------------------------------------------------------------------
+    with tab_experto:
+        st.subheader("Panel de Adquisición Dinámica de Conocimiento (Modo Experto)")
+        st.write(
+            "Permite a un técnico especialista formular nuevas reglas o diagnósticos "
+            "e inyectarlos en caliente en la memoria lógica mediante `assertz/1`, "
+            "escribiéndolos de forma persistente en `base_conocimiento.pl`."
+        )
+
+        with st.form("form_modo_experto"):
+            col_f1, col_f2 = st.columns(2)
+            with col_f1:
+                id_nuevo = st.text_input(
+                    "ID del Diagnóstico (snake_case):",
+                    placeholder="ej. falla_pasta_termica",
+                    help="Identificador átomo de Prolog sin espacios ni tildes",
+                )
+                comp_nuevo = st.selectbox(
+                    "Componente físico afectado:",
+                    ["cpu", "gpu", "ram", "disco", "fuente", "placa_madre", "enfriamiento"],
+                )
+                sev_nueva = st.selectbox(
+                    "Nivel de severidad:",
+                    ["bajo", "medio", "alto", "critico"],
+                    index=1,
+                )
+            with col_f2:
+                sintomas_nuevos = st.multiselect(
+                    "Síntomas que componen el patrón de falla:",
+                    todos_sintomas,
+                    help="Seleccione los síntomas requeridos para activar el nuevo diagnóstico",
+                )
+                persistir_disco = st.checkbox(
+                    "Escribir persistentemente a base_conocimiento.pl",
+                    value=True,
+                    help="Si está activo, la regla se conservará tras reiniciar el programa.",
+                )
+
+            desc_nueva = st.text_area(
+                "Descripción técnica y recomendación:",
+                placeholder="Explique la causa raíz y las medidas de remediación recomendadas...",
+                height=80,
+            )
+
+            btn_guardar = st.form_submit_button(
+                "Inyectar y Persistir Diagnóstico",
+                type="primary",
+                use_container_width=True,
+            )
+
+            if btn_guardar:
+                if not id_nuevo.strip():
+                    st.error("Debe ingresar un ID para el diagnóstico.")
+                elif not sintomas_nuevos:
+                    st.error("Debe seleccionar al menos un síntoma para el patrón.")
+                else:
+                    res = motor.adquirir_nuevo_diagnostico(
+                        id_diag=id_nuevo,
+                        componente=comp_nuevo,
+                        severidad=sev_nueva,
+                        sintomas=sintomas_nuevos,
+                        descripcion=desc_nueva,
+                        persistir=persistir_disco,
+                    )
+                    if res.get("ok"):
+                        st.success(res["mensaje"])
+                        LABELS_DIAGNOSTICOS[res["id"]] = id_nuevo.replace("_", " ").title()
+                    else:
+                        st.error(res["mensaje"])
+
+        st.markdown("---")
+        st.markdown("##### Catálogo de Diagnósticos Registrados en la Base de Conocimiento:")
+        diags_actuales = motor.obtener_diagnosticos_registrados()
+        cols_d = st.columns(3)
+        for i, d in enumerate(diags_actuales):
+            with cols_d[i % 3]:
+                st.markdown(f"- `{d}` ({LABELS_DIAGNOSTICOS.get(d, d)})")
 
 
 def main():
