@@ -2,6 +2,8 @@
 
 > Fuente de verdad técnica. Si el código y este documento difieren, **se detiene el trabajo y se pregunta al humano**.
 > Diagramas: `docs/architecture/README.md`.
+>
+> **⚠ Desactualizado (detectado 2026-11-10):** §1, §2, §4, §5 y §10 describen el diseño inicial, que no se implementó así. El código real usa listas de átomos de síntoma (`diagnosticar_todos(+Sintomas, +Componente, -Pares)`), interfaz Streamlit (D-021), DCG (D-023), `assertz` en Modo Experto (D-024) y scikit-learn (D-025). Mientras no se reescriba este documento, la referencia vigente del contrato es `docs/entregables/03-diccionario-predicados.md` y las decisiones D-021…D-026 de `07`.
 
 ## 1. Vista general
 

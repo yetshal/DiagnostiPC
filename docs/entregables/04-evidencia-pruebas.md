@@ -92,5 +92,6 @@ Demuestra que la lógica de inferencia reside enteramente en Prolog y funciona s
 
 - **Consulta:** `?- diagnosticar_todos([pantalla_azul, errores_memoria, reinicios_aleatorios], cualquiera, Diags).`
 - **Archivo:** `docs/entregables/evidencia/03_prolog_consulta_directa.png`
+- **Entorno de la captura:** Linux con SWI-Prolog 10.0.2 (prueba de portabilidad, RNF-09). El entorno Windows del proyecto usa 10.1.14 (ver `docs/ai/05-estado-sesion.md`).
 
 ![Consulta Directa Prolog](evidencia/03_prolog_consulta_directa.png)

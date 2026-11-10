@@ -454,9 +454,14 @@ class MotorInferencia:
                 f"registrar_diagnostico_dinamico({diag_clean}, {comp_clean}, {sev_clean}, "
                 f"{self._lista_pl(sintomas_limpios)}, '{desc_escaped}')"
             )
-            # Consumir la consulta para efectuar el assertz
-            for _ in self._prolog.query(q):
-                break
+            # Consumir la consulta para efectuar el assertz; si Prolog la rechaza
+            # (p. ej. patrón contradictorio, Sección 16) no se persiste nada.
+            if not list(self._prolog.query(q)):
+                return {
+                    "ok": False,
+                    "id": diag_clean,
+                    "mensaje": "Prolog rechazó la regla: el patrón contiene síntomas incompatibles entre sí.",
+                }
         except Exception as exc:
             return {
                 "ok": False,

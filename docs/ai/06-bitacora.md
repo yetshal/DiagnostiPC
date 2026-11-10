@@ -19,6 +19,15 @@
 
 ---
 
+### Sesión 5 · 2026-11-10 · F7-01
+
+- **Persona / agente:** yetshal + Claude Code (Opus 5.5)
+- **Hecho:** Sección 16 de consistencia (`incompatible/3`, `contradicciones/2`, `estado_consistencia/2`); bloqueo en `diagnosticar_todos/3`, `sintoma_desempate/4` y Modo Experto; `tests/tests_kb.pl` creado (no existía). Corregido E-003 (Experto persistía reglas rechazadas). Capturas `01`/`02` renombradas (estaban invertidas); `02-arquitectura` marcado como desactualizado; `.gitignore` con `graphify-out/`.
+- **Pruebas:** `swipl -q -g run_tests -t halt tests/tests_kb.pl` → 11/11, exit 0 · `.venv\Scripts\python.exe pruebas.py` → 11/11, exit 0
+- **Commits:** pendiente (rama `feat/F7-01-contradicciones`)
+- **Correcciones humanas a la IA:** —
+- **Siguiente:** F7-02
+
 ### Sesión 4 · 2026-11-05 · F6-Entregable 3
 
 - **Persona / agente:** Pareja / Antigravity AI (Gemini 3.8 Flash)

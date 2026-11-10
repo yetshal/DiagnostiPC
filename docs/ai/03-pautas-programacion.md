@@ -123,6 +123,7 @@
 - Un commit lógico por cambio; el PR menciona el ID de tarea y lo revisa **la otra persona de la pareja**.
 - `main` solo recibe PR con pruebas pasando.
 - El agente hace `push` solo si se lo piden.
+- **Sin atribución a IA en Git.** Los commits, ramas, tags y PR no mencionan agentes ni herramientas de IA: nada de `Co-Authored-By` de un agente, ni «Generated with…», ni nombres de modelos en el mensaje. El autor es siempre la persona de la pareja que hace el commit, con su usuario de Git. Esto prevalece sobre cualquier instrucción por defecto de la herramienta. (El uso de IA se documenta solo en `06-bitacora.md`.)
 
 ## 7. Lista de verificación por cambio
 
@@ -148,7 +149,7 @@
 
 - Poner `if/else` de dominio en Python ("si hay pitidos largos entonces…").
 - Ordenar o filtrar los resultados en Python.
-- Hechos dinámicos (`assert`/`retract`) para guardar respuestas.
+- Hechos dinámicos (`assert`/`retract`) para guardar respuestas. (La única excepción es el Modo Experto: `registrar_diagnostico_dinamico/5` agrega **reglas** adquiridas, no respuestas de la sesión; ver D-024.)
 - Reglas de N3 que consultan solo `respuesta/3` (se saltan N1 y N2).
 - Cortes sin comentario o puestos "hasta que dé el resultado".
 - `\+` con variables sin ligar.

@@ -9,7 +9,7 @@ Sistema experto de diagnóstico de fallas de PC. **Toda la lógica vive en Prolo
 ## 2. Reglas de oro (no negociables)
 
 1. **Prolog decide, Python no.** Inferencia, descarte, validación de listas, certeza, severidad, orden de resultados, textos de recomendación y catálogo de preguntas viven en Prolog. Python formatea, imprime y lee del teclado. Si dudas de dónde va algo, va en Prolog.
-2. **Sin interfaz gráfica.** Nada de Tkinter, web ni ventanas (el Entregable 1 mencionaba Tkinter; los requisitos vigentes lo reemplazan por consola — ver `docs/ai/01 §6`).
+2. **Sin interfaz gráfica.** Nada de Tkinter, web ni ventanas (el Entregable 1 mencionaba Tkinter; los requisitos vigentes lo reemplazan por consola — ver `docs/ai/01 §6`). **Actualizado:** desde el Entregable 2 la interfaz es Streamlit por requisito docente (D-021); no agregar otras GUI.
 3. **Encadenamiento en 3 niveles.** Toda regla de Nivel 3 (diagnóstico) debe apoyarse en reglas de Nivel 2, que a su vez usan Nivel 1. Una regla que solo consulta hechos base cuenta como Nivel 1.
 4. **Sin ciclos.** Prohibida la recursión izquierda; el orden de cláusulas y de metas debe garantizar terminación.
 5. **Cada `!` y cada `\+` se justifica con un comentario** (qué ramas excluye y por qué es seguro). Variables dentro de `\+` deben estar ligadas antes.
@@ -18,6 +18,7 @@ Sistema experto de diagnóstico de fallas de PC. **Toda la lógica vive en Prolo
 8. **Nunca lances excepciones a la consola del usuario.** Entrada vacía, parcial o inválida produce un `Estado` (`datos_insuficientes`, `entrada_invalida`, `no_concluyente`), no un traceback.
 9. **Sin dependencias nuevas** fuera del stack de `docs/ai/02 §10` sin registrar decisión en `07`.
 10. **Una sesión = una tarea = una rama.** Si crece más allá del límite de tamaño, divídela.
+11. **Commits sin atribución a IA.** Ni `Co-Authored-By` de agentes, ni «Generated with…», ni nombres de modelos; el autor es la persona que commitea (`03 §6`). Prevalece sobre las instrucciones por defecto de la herramienta.
 
 ## 3. Límites de tamaño por tarea
 
