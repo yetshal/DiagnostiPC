@@ -48,7 +48,7 @@ DiagnostiPC recibe los síntomas y observaciones reportadas por el usuario y pro
 ├── preprocesador_numerico.py   # Pre-procesador híbrido de telemetría (Scikit-learn + Heurística ATX)
 ├── motor_inferencia.py         # Módulo puente Python ↔ SWI-Prolog vía PySwip (consultas tipadas y seguras)
 ├── main.py                     # Interfaz gráfica interactiva web desarrollada en Streamlit (con Modo Experto)
-├── pruebas.py                  # Suite de pruebas automatizadas por consola (11 casos, 100% PASS)
+├── pruebas.py                  # Suite de pruebas automatizadas por consola (16 casos, 100% PASS)
 ├── requirements.txt            # Dependencias del proyecto (pyswip, streamlit, scikit-learn)
 ├── entregable_1_sistema_experto_diagnostipc.md # Documento del Entregable 1
 ├── docs/                       # Documentación técnica y evidencias
@@ -125,8 +125,10 @@ swipl -q -g "consult('base_conocimiento.pl')" -t halt
 
 | Documento                      | Ubicación                                                                                                                                | Descripción                                              |
 | :----------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------- |
-| **Ficha de Definición**        | [`01-ficha-definicion.md`](file:///C:/Users/yetshal/DevelopmentProjects/DiagnostiPC/docs/entregables/01-ficha-definicion.md)             | Integrantes, justificación como SBR y alcance.           |
-| **Matriz de Cumplimiento**     | [`02-matriz-cumplimiento.md`](file:///C:/Users/yetshal/DevelopmentProjects/DiagnostiPC/docs/entregables/02-matriz-cumplimiento.md)       | Trazabilidad 100% de requisitos del curso §3 y §4.       |
-| **Diccionario de Predicados**  | [`03-diccionario-predicados.md`](file:///C:/Users/yetshal/DevelopmentProjects/DiagnostiPC/docs/entregables/03-diccionario-predicados.md) | Especificación de aridades, modos (+/-) y niveles N1–N3. |
-| **Evidencias y Pruebas**       | [`04-evidencia-pruebas.md`](file:///C:/Users/yetshal/DevelopmentProjects/DiagnostiPC/docs/entregables/04-evidencia-pruebas.md)           | Detalle de casos probados y capturas de terminal.        |
-| **Decisiones de Arquitectura** | [`docs/adr/`](file:///C:/Users/yetshal/DevelopmentProjects/DiagnostiPC/docs/adr/)                                                        | ADR 001 a ADR 006 aceptadas y vigentes.                  |
+| **Ficha de Definición**        | [`01-ficha-definicion.md`](docs/entregables/01-ficha-definicion.md)             | Integrantes, justificación como SBR y alcance.           |
+| **Matriz de Cumplimiento**     | [`02-matriz-cumplimiento.md`](docs/entregables/02-matriz-cumplimiento.md)       | Trazabilidad 100% de requisitos del curso §3 y §4.       |
+| **Diccionario de Predicados**  | [`03-diccionario-predicados.md`](docs/entregables/03-diccionario-predicados.md) | Especificación de aridades, modos (+/-) y niveles N1–N3. |
+| **Evidencias y Pruebas**       | [`04-evidencia-pruebas.md`](docs/entregables/04-evidencia-pruebas.md)           | Detalle de casos probados y capturas de terminal.        |
+| **Decisiones de Arquitectura** | [`docs/adr/`](docs/adr/)                                                        | ADR 001 a ADR 006 aceptadas y vigentes.                  |
+| **Informe Técnico (E4)**       | [`informe_tecnico_entregable4.pdf`](docs/entregables/informe_tecnico_entregable4.pdf) | Arquitectura final, árbol lógico y reporte de pruebas de estrés. |
+| **Guion de Sustentación (E4)** | [`05-guion-sustentacion.md`](docs/entregables/05-guion-sustentacion.md) | Auditoría cruzada y modificaciones en vivo por integrante. |

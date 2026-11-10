@@ -181,6 +181,7 @@ sintomas_del_componente(Componente, Sintomas) :-
 subconjunto_valido([], []).
 subconjunto_valido([H|T], [H|Validos]) :-
     sintoma_valido(H), !,
+    % CORTE: H es válido; impide que la 3.ª cláusula lo descarte al reintentar.
     subconjunto_valido(T, Validos).
 subconjunto_valido([_|T], Validos) :-
     subconjunto_valido(T, Validos).
@@ -237,6 +238,7 @@ componente_dominante(ListaSintomas, Componente) :-
 
 %% max_par/2 — obtiene el par con mayor clave numérica.
 max_par([X], X) :- !.
+% CORTE: con un solo elemento no se prueba la cláusula recursiva (evita max_par([], _)).
 max_par([H|T], Max) :-
     max_par(T, MaxT),
     H = N1-_,
@@ -285,6 +287,7 @@ diagnosticar_todos(ListaSintomas, _Componente, []) :-
 %% Devuelve el nivel de severidad de un diagnóstico.
 severidad_caso(Diagnostico, Nivel) :-
     severidad_diagnostico(Diagnostico, Nivel), !.
+% CORTE: si hay severidad registrada, se excluye el valor por defecto 'desconocido'.
 severidad_caso(_, desconocido).
 
 %% componente_afectado/2
@@ -293,6 +296,7 @@ severidad_caso(_, desconocido).
 componente_afectado(ListaSintomas, Componente) :-
     tiene_sintomas_suficientes(ListaSintomas),
     componente_dominante(ListaSintomas, Componente), !.
+% CORTE: un solo componente dominante; excluye el valor por defecto 'desconocido'.
 componente_afectado(_, desconocido).
 
 %% =============================================================================
@@ -579,11 +583,14 @@ extraer_sintomas_dcg(Tokens, Sintomas) :-
     is_list(Tokens),
     phrase(analisis_texto_dcg(SintomasBrutos), Tokens),
     list_to_set(SintomasBrutos, Sintomas), !.
+% CORTE: el primer análisis (que prioriza reconocer frases sobre ignorar palabras) es el válido;
+% excluye el fallback que devuelve [].
 extraer_sintomas_dcg(_, []).
 
 %% Regla recursiva principal del parser DCG
 analisis_texto_dcg([S | Resto]) -->
     frase_sintoma(S), !,
+    % CORTE: si una frase se reconoce, no se reinterpreta su primera palabra como ruido.
     conector_opcional,
     analisis_texto_dcg(Resto).
 analisis_texto_dcg(Resto) -->
@@ -592,6 +599,7 @@ analisis_texto_dcg(Resto) -->
 analisis_texto_dcg([]) --> [].
 
 %% Conectores y palabras de enlace opcionales
+%% CORTE (cada cláusula): consumido el conector, no se prueba la alternativa vacía.
 conector_opcional --> [y], !.
 conector_opcional --> [e], !.
 conector_opcional --> [ademas], !.

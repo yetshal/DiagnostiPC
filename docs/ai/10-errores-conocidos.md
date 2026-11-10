@@ -93,5 +93,5 @@
 ### E-004 · `.venv` ausente en la máquina Windows
 
 - **Fecha / sesión:** 2026-11-10 / Sesión 5
-- **Síntoma:** `python` abre el alias de Microsoft Store; ningún Python global tiene `pyswip`.
+- **Síntoma:** `python` abre el alias de Microsoft Store; ningún Python global tiene `pyswip`. La carpeta `venv/` existente está rota (`Scripts/` vacío, sin `pyvenv.cfg`); se puede borrar.
 - **Solución:** `py -3.14 -m venv .venv` y `.venv\Scripts\python.exe -m pip install -r requirements.txt`; ejecutar todo con `.venv\Scripts\python.exe`.
