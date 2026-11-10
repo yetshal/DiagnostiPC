@@ -6,13 +6,13 @@
 
 - **Fecha:** 2026-11-10
 - **Fase actual:** F7 / Entregable 4. Todo lo que puede hacer un agente está terminado.
-- **Ramas (apiladas, sin `push` ni fusión a `main`):** `feat/F7-01-contradicciones` → `feat/F7-02-ui-contradicciones` → `docs/F7-04-arquitectura` (contiene también F7-05 y el cierre).
+- **Ramas:** F7-01…F7-05 ya fusionadas a `main` (PR #1). Abierta: `fix/F7-06-sintoma-nuevo-experto` (Modo Experto acepta síntomas nuevos), sin commitear.
 - **Estado general:** el sistema detecta y bloquea entradas contradictorias en Prolog, lo muestra en Streamlit y está cubierto por pruebas. El informe PDF y el guion de sustentación están listos.
 
 ## Pendiente (solo humanos)
 
 1. **F7-03:** validar con el técnico (T1) los 3 pares de `incompatible/3`, marcados `[PENDIENTE-VALIDAR]`. Si aprueba, quitar la marca y citar `T1` en el comentario.
-2. Revisar las tres ramas y fusionarlas a `main` en orden, según `03 §6`. Revisa la otra persona de la pareja.
+2. Revisar y fusionar `fix/F7-06-sintoma-nuevo-experto` según `03 §6`.
 3. Ensayar la sustentación con `docs/entregables/05-guion-sustentacion.md`: auditoría cruzada y modificaciones A1–A5 y B1–B4.
 4. Opcional: borrar la carpeta `venv/`, que está rota (E-004).
 
@@ -36,12 +36,12 @@
 | `tests/tests_kb.pl`          | ✅     | 11/11 plunit (consistencia de la entrada)                    |
 | `motor_inferencia.py`        | ✅     | `verificar_consistencia()`; E-003 corregido                  |
 | `main.py`                    | ✅     | Aviso de contradicción verificado con `AppTest`              |
-| `pruebas.py`                 | ✅     | 16/16 PASS                                                   |
+| `pruebas.py`                 | ✅     | 17/17 PASS (caso 17: síntoma nuevo en Modo Experto)          |
 | `docs/ai/02-arquitectura.md` | ✅     | Al día con el código                                         |
 | Informe PDF y guion          | ✅     | 4 páginas; cifras tomadas de las pruebas al generarlo        |
 
 - **SWI-Prolog:** 10.1.14 (x64-win64). Las capturas de evidencia son de Linux con 10.0.2.
-- **Python:** 3.14 en `.venv` (recreado esta sesión, E-004). Ejecutar con `.venv\Scripts\python.exe`.
+- **Python:** `.venv` recreado con `uv venv` + `uv pip install -r requirements.txt` (Streamlit 1.67.0). Ejecutar con `.venv\Scripts\python.exe`.
 
 ## Riesgos
 

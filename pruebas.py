@@ -533,6 +533,34 @@ def main() -> None:
     )
 
     # -----------------------------------------------------------------------
+    # CASO 17: el Modo Experto crea un síntoma nuevo y la barra lateral lo lista
+    # -----------------------------------------------------------------------
+    total += 1
+    from streamlit.testing.v1 import AppTest
+
+    app = AppTest.from_file(str(Path(__file__).resolve().parent / "main.py"), default_timeout=30)
+    app.run()
+    form_inputs = [w for w in app.text_input if w.label.startswith("ID del Diagn")]
+    form_inputs[0].input("falla_bobina_prueba")
+    [w for w in app.text_input if w.label.startswith("Síntomas nuevos")][0].input("ruido_bobina_prueba")
+    [w for w in app.checkbox if w.label.startswith("Escribir persistentemente")][0].uncheck()
+    [b for b in app.button if b.label.startswith("Inyectar")][0].click()
+    app.run()
+    claves = {c.key for c in app.checkbox}
+    ok_17 = not app.exception and "chk_ruido_bobina_prueba" in claves
+    pasados += ok_17
+    imprimir_caso(
+        n=17,
+        titulo="Modo Experto Crea Síntoma Nuevo",
+        objetivo="Un síntoma escrito en el formulario aparece en la lista lateral",
+        entrada="id=falla_bobina_prueba, síntomas nuevos=ruido_bobina_prueba",
+        consulta="AppTest(main.py) → enviar formulario (persistir=False)",
+        esperado="checkbox chk_ruido_bobina_prueba presente, sin excepción",
+        obtenido=f"presente={'chk_ruido_bobina_prueba' in claves}, excepcion={bool(app.exception)}",
+        ok=ok_17,
+    )
+
+    # -----------------------------------------------------------------------
     # Resumen final
     # -----------------------------------------------------------------------
     print("=" * 62)

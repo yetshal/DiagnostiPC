@@ -14,6 +14,7 @@
 - [ ] **F7-03** _(requiere al técnico; no lo puede hacer un agente)_ · Validar con el técnico (T1) los 3 pares `[PENDIENTE-VALIDAR]` de `incompatible/3` y decidir si se agregan más (p. ej. negaciones en la DCG: «no se calienta»). — _Resp.:_ K
 - [x] **F7-04** · Reescribir `docs/ai/02-arquitectura.md` según el código real (hoy marcado como desactualizado). — _Resp.:_ K+I
 - [x] **F7-05** · Informe técnico PDF (arquitectura final, árbol lógico N1–N3, reporte de pruebas de estrés) y guion de modificaciones en vivo. — _Dep:_ F7-02 — _Resp.:_ K+I
+- [x] **F7-06** · Modo Experto: campo «Síntomas nuevos» en el formulario (antes solo se podía elegir entre los existentes) y `st.rerun()` para que la barra lateral los liste. Bloque persistido marcado `[PENDIENTE-VALIDAR]`. — _AC:_ caso 17 de `pruebas.py` (`AppTest`); 17/17. — _Resp.:_ K
 
 ---
 

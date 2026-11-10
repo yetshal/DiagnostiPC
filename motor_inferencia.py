@@ -504,7 +504,7 @@ class MotorInferencia:
                 # Evitar escribir duplicados si el diagnóstico ya está persistido en el archivo
                 if f"patron_falla({diag_clean}," not in content:
                     bloque_pl = (
-                        f"\n%% [DINAMICO - ADQUIRIDO EN CALIENTE: {diag_clean}]\n"
+                        f"\n%% [DINAMICO - ADQUIRIDO EN CALIENTE: {diag_clean}] [PENDIENTE-VALIDAR]\n"
                         f"patron_falla({diag_clean}, {self._lista_pl(sintomas_limpios)}).\n"
                         f"severidad_diagnostico({diag_clean}, {sev_clean}).\n"
                         f"diagnostico_describe({diag_clean}, '{desc_escaped}').\n"
