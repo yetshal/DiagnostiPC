@@ -7,6 +7,16 @@
 
 ---
 
+## F7 · Entregable 4 — Contradicciones, Auditoría Cruzada y Sustentación
+
+- [x] **F7-01** · Consistencia de la entrada en Prolog — Sección 16 de `base_conocimiento.pl`: `incompatible/3`, `contradicciones/2`, `estado_consistencia/2`; bloqueo en `diagnosticar_todos/3`, `sintoma_desempate/4` y `registrar_diagnostico_dinamico/5`; plunit en `tests/tests_kb.pl`. — _AC:_ entrada contradictoria → sin diagnósticos; 11/11 plunit y 11/11 `pruebas.py`. — _Resp.:_ K
+- [x] **F7-02** · Integración en Python y Streamlit — `motor.verificar_consistencia()` que llama a `contradicciones/2`; banner de bloqueo con el motivo en `main.py` (entrada manual, DCG y telemetría); casos 12+ en `pruebas.py` (contradicción directa, DCG ambigua, combinación no prevista). — _AC:_ 16/16 `pruebas.py`; aviso verificado con `AppTest`. — _Dep:_ F7-01 — _Resp.:_ I
+- [ ] **F7-03** _(requiere al técnico; no lo puede hacer un agente)_ · Validar con el técnico (T1) los 3 pares `[PENDIENTE-VALIDAR]` de `incompatible/3` y decidir si se agregan más (p. ej. negaciones en la DCG: «no se calienta»). — _Resp.:_ K
+- [x] **F7-04** · Reescribir `docs/ai/02-arquitectura.md` según el código real (hoy marcado como desactualizado). — _Resp.:_ K+I
+- [x] **F7-05** · Informe técnico PDF (arquitectura final, árbol lógico N1–N3, reporte de pruebas de estrés) y guion de modificaciones en vivo. — _Dep:_ F7-02 — _Resp.:_ K+I
+
+---
+
 ## F6 · Entregable 3 — DCG en Prolog, Modo Experto en Caliente y Pre-procesamiento Numérico
 
 - [x] **F6-01** · Gramática de Cláusulas Definidas (DCG) en Prolog — Predicado `extraer_sintomas_dcg/2`, lexicón de frases compuestas, sinónimos técnicos y filtrado de ruido/conectores. — _AC:_ Extracción exacta de síntomas canónicos desde secuencias de átomos. — _Resp.:_ K

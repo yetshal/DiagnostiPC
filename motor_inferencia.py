@@ -190,6 +190,34 @@ class MotorInferencia:
             print(f"[MotorInferencia] Error en validar_sintomas: {exc}")
         return validos
 
+    def verificar_consistencia(self, sintomas: list[str]) -> dict:
+        """
+        Consulta ``estado_consistencia/2`` y ``par_contradictorio/4`` (Sección 16).
+
+        Returns
+        -------
+        ``{'estado': 'consistente'|'contradictoria', 'conflictos': [{'a', 'b', 'motivo'}]}``.
+        Ante un fallo del puente devuelve ``consistente`` sin conflictos: el
+        bloqueo real lo aplica Prolog dentro de ``diagnosticar_todos/3``.
+        """
+        resultado = {"estado": "consistente", "conflictos": []}
+        if not sintomas:
+            return resultado
+        lista = self._lista_pl(sintomas)
+        try:
+            for sol in self._prolog.query(f"estado_consistencia({lista}, Estado)"):
+                resultado["estado"] = _atom_str(sol["Estado"])
+                break
+            for sol in self._prolog.query(f"par_contradictorio({lista}, A, B, Motivo)"):
+                resultado["conflictos"].append({
+                    "a": _atom_str(sol["A"]),
+                    "b": _atom_str(sol["B"]),
+                    "motivo": _atom_str(sol["Motivo"]),
+                })
+        except Exception as exc:
+            print(f"[MotorInferencia] Error en verificar_consistencia: {exc}")
+        return resultado
+
     def obtener_componente_afectado(self, sintomas: list[str]) -> list[str]:
         """
         Llama a ``componente_afectado/2`` e infiere qué componente es el
@@ -454,9 +482,14 @@ class MotorInferencia:
                 f"registrar_diagnostico_dinamico({diag_clean}, {comp_clean}, {sev_clean}, "
                 f"{self._lista_pl(sintomas_limpios)}, '{desc_escaped}')"
             )
-            # Consumir la consulta para efectuar el assertz
-            for _ in self._prolog.query(q):
-                break
+            # Consumir la consulta para efectuar el assertz; si Prolog la rechaza
+            # (p. ej. patrón contradictorio, Sección 16) no se persiste nada.
+            if not list(self._prolog.query(q)):
+                return {
+                    "ok": False,
+                    "id": diag_clean,
+                    "mensaje": "Prolog rechazó la regla: el patrón contiene síntomas incompatibles entre sí.",
+                }
         except Exception as exc:
             return {
                 "ok": False,

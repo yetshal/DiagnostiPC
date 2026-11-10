@@ -4,62 +4,47 @@
 
 ## Última actualización
 
-- **Fecha:** 2026-11-05
-- **Fase actual:** F6 / Entregable 3 (Procesamiento de Lenguaje Natural con DCG, Aprendizaje Dinámico en Caliente y Pre-procesamiento Numérico Híbrido)
-- **Estado general:** Implementación 100% completada, suite de 11 pruebas en verde (100% PASS), interfaz gráfica web interactiva con Streamlit (`main.py`) con Modo Experto y entrada DCG operativa, y documentación técnica sincronizada.
+- **Fecha:** 2026-11-10
+- **Fase actual:** F7 / Entregable 4. Todo lo que puede hacer un agente está terminado.
+- **Ramas (apiladas, sin `push` ni fusión a `main`):** `feat/F7-01-contradicciones` → `feat/F7-02-ui-contradicciones` → `docs/F7-04-arquitectura` (contiene también F7-05 y el cierre).
+- **Estado general:** el sistema detecta y bloquea entradas contradictorias en Prolog, lo muestra en Streamlit y está cubierto por pruebas. El informe PDF y el guion de sustentación están listos.
 
-## Qué se hizo en la sesión de hoy
+## Pendiente (solo humanos)
 
-1. **Implementación de la Gramática DCG en Prolog (`base_conocimiento.pl`):**
-   - Directivas dinámicas `:- dynamic` y `:- discontiguous` para los predicados de reglas, diagnósticos y componentes.
-   - Gramática DCG completa (`extraer_sintomas_dcg/2`) con lexicón de frases compuestas, sinónimos técnicos y filtrado recursivo de ruido/conectores (`y`, `ademas`, `tambien`, `con`, `pero`).
-   - Mapeo robusto a los 20 síntomas canónicos del sistema de hardware.
+1. **F7-03:** validar con el técnico (T1) los 3 pares de `incompatible/3`, marcados `[PENDIENTE-VALIDAR]`. Si aprueba, quitar la marca y citar `T1` en el comentario.
+2. Revisar las tres ramas y fusionarlas a `main` en orden, según `03 §6`. Revisa la otra persona de la pareja.
+3. Ensayar la sustentación con `docs/entregables/05-guion-sustentacion.md`: auditoría cruzada y modificaciones A1–A5 y B1–B4.
+4. Opcional: borrar la carpeta `venv/`, que está rota (E-004).
 
-2. **Módulo de Adquisición Dinámica de Conocimiento (Modo Experto):**
-   - Predicado `registrar_diagnostico_dinamico/5` en Prolog para enlazar en memoria viva (`assertz/1`) el patrón de falla, severidad, descripción y componente sin reiniciar.
-   - Persistencia dual en `motor_inferencia.py`: escribe las cláusulas aprendidas al final de `base_conocimiento.pl` dentro de una sección estructurada para asegurar su supervivencia entre reinicios.
+**Lectura obligatoria para la próxima sesión con agente:** este archivo y `04` → F7-03.
 
-3. **Pre-procesador Numérico Híbrido (`preprocesador_numerico.py`):**
-   - Conversión de variables continuas de sensores (temperaturas CPU/GPU en °C, riel de 12V en V, FPS promedio, latencias de almacenamiento en ms y RPM de ventiladores) a hechos simbólicos discretos.
-   - Motor dual:
-     - Clasificador supervisado ligero con Scikit-learn (`DecisionTreeClassifier`).
-     - Heurística determinista basada en tolerancias ATX y especificaciones térmicas Intel/AMD.
+## Qué se hizo en la sesión 5
 
-4. **Interfaz Interactiva Streamlit (`main.py`):**
-   - Expansor de entrada por Lenguaje Natural libre conectada a la DCG de Prolog.
-   - Expansor de Telemetría Numérica con sliders para sensores y botón de discretización.
-   - Pestaña dedicada "Modo Experto (Adquisición Dinámica)" con formulario completo para dar de alta diagnósticos en caliente, inyección a memoria viva, persistencia y visualización del catálogo registrado.
-
-5. **Suite de Pruebas Automatizadas (`pruebas.py`):**
-   - Ampliada de 7 a 11 casos cubriendo DCG en Prolog (Caso 8), inyección en caliente con `assertz` (Caso 9), persistencia y recarga limpia tras reinicio (Caso 10) y telemetría ML (Caso 11).
-   - Ejecución 11/11 PASS (100%).
-
-6. **Actualización de Documentación:**
-   - Actualizados `requirements.txt`, `README.md`, `docs/entregables/03-diccionario-predicados.md`, `docs/ai/04-hoja-de-ruta.md`, `docs/ai/07-decisiones.md` (D-023, D-024, D-025) y bitácora `06`.
+| Tarea | Resultado |
+| ----- | --------- |
+| F7-01 | Sección 16 (`incompatible/3`, `par_contradictorio/4`, `contradicciones/2`, `estado_consistencia/2`). Bloqueo en `diagnosticar_todos/3`, `sintoma_desempate/4` y `registrar_diagnostico_dinamico/5`. `tests/tests_kb.pl` creado. Fix E-003. |
+| F7-02 | `motor.verificar_consistencia()`; aviso con el motivo en `main.py` para las tres vías de entrada; casos 12–16 en `pruebas.py`. |
+| F7-04 | `02-arquitectura.md` reescrito según el código real. |
+| F7-05 | `docs/entregables/informe_tecnico_entregable4.pdf` (se genera con `uv run --no-project --with reportlab python docs/entregables/informe/generar_informe.py`) y `05-guion-sustentacion.md`. |
+| Extra | Comentarios `CORTE` en todos los cortes antiguos (regla 5); capturas `01`/`02` renombradas; enlaces del README relativos; regla 11 de `AGENTS.md`: commits sin atribución a IA. |
 
 ## Estado del sistema
 
-| Componente                                    | Estado      | Notas                                                                  |
-| --------------------------------------------- | ----------- | ---------------------------------------------------------------------- |
-| Base de conocimiento (`base_conocimiento.pl`) | ✅ Completo | 790+ líneas, hechos base, 27 reglas N1–N3, DCG, dinámicos y persistencia |
-| Preprocesador numérico (`preprocesador_numerico.py`) | ✅ Completo | 220 líneas, motor Scikit-Learn y heurística estándar ATX |
-| Motor de inferencia (`motor_inferencia.py`)   | ✅ Completo | 470+ líneas, métodos de DCG, adquisición en caliente y telemetría      |
-| Interfaz gráfica web (`main.py`)              | ✅ Completo | 490+ líneas en Streamlit, 4 pestañas, entrada DCG y panel Modo Experto |
-| Suite de pruebas (`pruebas.py`)               | ✅ Completo | 420+ líneas, 11/11 casos pasando en terminal (código 0)                |
-| Dependencias (`requirements.txt`)             | ✅ Completo | `pyswip>=0.3.3`, `streamlit>=1.30.0`, `scikit-learn>=1.4.0`           |
-| Diccionario de predicados (`03`)              | ✅ Completo | Actualizado con DCG y adquisición en caliente                          |
-| Documentación y README                        | ✅ Completo | Actualizado con guía de Entregables 1, 2 y 3                           |
+| Componente                   | Estado | Notas                                                        |
+| ---------------------------- | ------ | ------------------------------------------------------------ |
+| `base_conocimiento.pl`       | ✅     | Carga sin advertencias; todos los `!` comentados             |
+| `tests/tests_kb.pl`          | ✅     | 11/11 plunit (consistencia de la entrada)                    |
+| `motor_inferencia.py`        | ✅     | `verificar_consistencia()`; E-003 corregido                  |
+| `main.py`                    | ✅     | Aviso de contradicción verificado con `AppTest`              |
+| `pruebas.py`                 | ✅     | 16/16 PASS                                                   |
+| `docs/ai/02-arquitectura.md` | ✅     | Al día con el código                                         |
+| Informe PDF y guion          | ✅     | 4 páginas; cifras tomadas de las pruebas al generarlo        |
 
-- **SWI-Prolog:** 10.1.14 (x64-win64)
-- **Python:** 3.14.7 (en `.venv`)
-- **PySwip:** 0.3.3
-- **Streamlit:** 1.66.1
-- **Scikit-Learn:** 1.9.1
+- **SWI-Prolog:** 10.1.14 (x64-win64). Las capturas de evidencia son de Linux con 10.0.2.
+- **Python:** 3.14 en `.venv` (recreado esta sesión, E-004). Ejecutar con `.venv\Scripts\python.exe`.
 
-## Próximos pasos sugeridos para el equipo humano
+## Riesgos
 
-1. Ejecutar localmente `streamlit run main.py` o `.venv\Scripts\python.exe main.py` para interactuar con las nuevas funciones:
-   - Probar la entrada de texto libre en el expansor DCG: *"El equipo se calienta mucho, la pantalla se pone azul y se reinicia sola"*.
-   - Probar el clasificador de telemetría: subir temperatura a 92°C y bajar voltaje a 11.1V.
-   - Ir a la pestaña **Modo Experto**, registrar un diagnóstico personalizado (ej. `falla_pasta_termica`) y comprobar cómo se evalúa de inmediato y se escribe al archivo `.pl`.
-2. Grabar el video demostrativo o ensayar la sustentación del Entregable 3 cubriendo los 3 requisitos clave del docente.
+- Los pares incompatibles no tienen fuente hasta que pase F7-03; dilo en la sustentación antes de que lo señalen.
+- La DCG no interpreta negaciones («no se calienta»). Es una limitación declarada en el informe.
+- `diagnosticar_todos/3` deja un punto de elección. Es inofensivo, y la forma de quitarlo está descrita en el guion (A5) por si piden un cambio en vivo.

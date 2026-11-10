@@ -81,3 +81,17 @@
 - **Solución:** Mover la lógica de mutación a callbacks nativos (`on_click=cb_interpretar_dcg` y `on_click=cb_aplicar_telemetria`). En Streamlit, las funciones conectadas con `on_click` se ejecutan antes de que cualquier widget comience su renderizado.
 - **Archivos:** `main.py`.
 - **Cómo evitarlo:** Toda acción que cambie el valor de un checkbox o widget controlado por clave debe ejecutarse en un callback `on_click` o `on_change`.
+
+### E-003 · El Modo Experto persistía reglas que Prolog había rechazado (`motor_inferencia.py`)
+
+- **Fecha / sesión:** 2026-11-10 / Sesión 5 (F7-01)
+- **Síntoma:** `adquirir_nuevo_diagnostico()` devolvía `ok: True` y escribía en `base_conocimiento.pl` aunque `registrar_diagnostico_dinamico/5` fallara.
+- **Causa:** `for _ in query: break` no distingue "sin soluciones" de "éxito"; un fallo de Prolog no es una excepción en PySwip.
+- **Solución:** `if not list(self._prolog.query(q)):` → devolver `ok: False` sin tocar el archivo.
+- **Cómo evitarlo:** toda consulta con efectos (assertz) debe comprobar que tuvo al menos una solución antes de continuar.
+
+### E-004 · `.venv` ausente en la máquina Windows
+
+- **Fecha / sesión:** 2026-11-10 / Sesión 5
+- **Síntoma:** `python` abre el alias de Microsoft Store; ningún Python global tiene `pyswip`. La carpeta `venv/` existente está rota (`Scripts/` vacío, sin `pyvenv.cfg`); se puede borrar.
+- **Solución:** `py -3.14 -m venv .venv` y `.venv\Scripts\python.exe -m pip install -r requirements.txt`; ejecutar todo con `.venv\Scripts\python.exe`.

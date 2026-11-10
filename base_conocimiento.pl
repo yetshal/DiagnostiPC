@@ -181,6 +181,7 @@ sintomas_del_componente(Componente, Sintomas) :-
 subconjunto_valido([], []).
 subconjunto_valido([H|T], [H|Validos]) :-
     sintoma_valido(H), !,
+    % CORTE: H es válido; impide que la 3.ª cláusula lo descarte al reintentar.
     subconjunto_valido(T, Validos).
 subconjunto_valido([_|T], Validos) :-
     subconjunto_valido(T, Validos).
@@ -237,6 +238,7 @@ componente_dominante(ListaSintomas, Componente) :-
 
 %% max_par/2 — obtiene el par con mayor clave numérica.
 max_par([X], X) :- !.
+% CORTE: con un solo elemento no se prueba la cláusula recursiva (evita max_par([], _)).
 max_par([H|T], Max) :-
     max_par(T, MaxT),
     H = N1-_,
@@ -259,6 +261,10 @@ diagnostico_posible(Patron, ListaSintomas, _Componente) :-
 %% +ListaSintomas, +Componente, -Diagnosticos
 %% Recopila todos los diagnósticos posibles en una lista de pares Diag-Severidad.
 %% El parámetro Componente puede ser 'cualquiera' para no filtrar por componente.
+diagnosticar_todos(ListaSintomas, _Componente, []) :-
+    entrada_contradictoria(ListaSintomas), !.
+% CORTE: entrada con síntomas incompatibles (Sección 16); se bloquea antes de
+% inferir para no emitir un diagnóstico sobre hechos imposibles.
 diagnosticar_todos(ListaSintomas, _Componente, Diagnosticos) :-
     findall(
         Diag-Sev,
@@ -281,6 +287,7 @@ diagnosticar_todos(ListaSintomas, _Componente, []) :-
 %% Devuelve el nivel de severidad de un diagnóstico.
 severidad_caso(Diagnostico, Nivel) :-
     severidad_diagnostico(Diagnostico, Nivel), !.
+% CORTE: si hay severidad registrada, se excluye el valor por defecto 'desconocido'.
 severidad_caso(_, desconocido).
 
 %% componente_afectado/2
@@ -289,6 +296,7 @@ severidad_caso(_, desconocido).
 componente_afectado(ListaSintomas, Componente) :-
     tiene_sintomas_suficientes(ListaSintomas),
     componente_dominante(ListaSintomas, Componente), !.
+% CORTE: un solo componente dominante; excluye el valor por defecto 'desconocido'.
 componente_afectado(_, desconocido).
 
 %% =============================================================================
@@ -524,7 +532,10 @@ sintoma_desempate(ListaSintomas, SintomaSugerido, HipotesisBeneficiadas, Motivo)
         (
             member(parcial(_, _, Faltantes, _), Parciales),
             member(S, Faltantes),
-            \+ member(S, ListaSintomas)
+            \+ member(S, ListaSintomas),
+            % \+ seguro: S y ListaSintomas ligados; no sugiere un síntoma
+            % que contradiga lo ya reportado (Sección 16).
+            \+ incompatible_con_lista(S, ListaSintomas)
         ),
         CandidatosBrutos
     ),
@@ -572,11 +583,14 @@ extraer_sintomas_dcg(Tokens, Sintomas) :-
     is_list(Tokens),
     phrase(analisis_texto_dcg(SintomasBrutos), Tokens),
     list_to_set(SintomasBrutos, Sintomas), !.
+% CORTE: el primer análisis (que prioriza reconocer frases sobre ignorar palabras) es el válido;
+% excluye el fallback que devuelve [].
 extraer_sintomas_dcg(_, []).
 
 %% Regla recursiva principal del parser DCG
 analisis_texto_dcg([S | Resto]) -->
     frase_sintoma(S), !,
+    % CORTE: si una frase se reconoce, no se reinterpreta su primera palabra como ruido.
     conector_opcional,
     analisis_texto_dcg(Resto).
 analisis_texto_dcg(Resto) -->
@@ -585,6 +599,7 @@ analisis_texto_dcg(Resto) -->
 analisis_texto_dcg([]) --> [].
 
 %% Conectores y palabras de enlace opcionales
+%% CORTE (cada cláusula): consumido el conector, no se prueba la alternativa vacía.
 conector_opcional --> [y], !.
 conector_opcional --> [e], !.
 conector_opcional --> [ademas], !.
@@ -764,6 +779,9 @@ frase_sintoma(ventilador_no_gira) --> [cooler, no, gira].
 %% =============================================================================
 
 registrar_diagnostico_dinamico(IdDiag, Componente, Severidad, ListaSintomas, Descripcion) :-
+    % \+ seguro: ListaSintomas ligada. Un patrón con síntomas incompatibles
+    % (Sección 16) nunca podría dispararse; se rechaza antes del assertz.
+    \+ entrada_contradictoria(ListaSintomas),
     assertz(patron_falla(IdDiag, ListaSintomas)),
     assertz(severidad_diagnostico(IdDiag, Severidad)),
     assertz(diagnostico_describe(IdDiag, Descripcion)),
@@ -774,6 +792,66 @@ registrar_diagnostico_dinamico(IdDiag, Componente, Severidad, ListaSintomas, Des
             ( sintoma_valido(Sintoma) -> true ; assertz(sintoma_valido(Sintoma)) )
         )
     ).
+
+%% =============================================================================
+%% SECCIÓN 16: CONSISTENCIA DE LA ENTRADA (ENTREGABLE 4)
+%% =============================================================================
+%% Detecta síntomas que no pueden observarse a la vez y bloquea el diagnóstico
+%% antes de emitirlo. no_arranca = el equipo no enciende o no pasa del POST
+%% (ver frase_sintoma(no_arranca)); los síntomas de abajo exigen el sistema
+%% operativo en ejecución, así que no pueden coexistir con él.
+
+%% --- Nivel 1: hechos de incompatibilidad -------------------------------------
+%% incompatible(+SintomaA, +SintomaB, -Motivo). Se escribe en un solo sentido;
+%% incompatible_con_lista/2 y par_contradictorio/4 la consultan en ambos.
+% [PENDIENTE-VALIDAR] Ninguna fuente de adquisicion-conocimiento.md lista estas
+% exclusiones; se derivan de la definición de no_arranca. Validar con T1.
+incompatible(no_arranca, fps_bajos,
+    'Medir FPS exige que el equipo arranque y ejecute una aplicacion grafica').
+incompatible(no_arranca, throttling,
+    'El throttling solo se observa con el procesador trabajando bajo carga en el sistema operativo').
+incompatible(no_arranca, rendimiento_lento,
+    'Evaluar el rendimiento exige que el sistema operativo este en ejecucion').
+
+%% par_contradictorio/4  (Nivel 1: solo consulta hechos y la lista)
+%% +Lista, -A, -B, -Motivo
+par_contradictorio(Lista, A, B, Motivo) :-
+    incompatible(A, B, Motivo),
+    memberchk(A, Lista),
+    memberchk(B, Lista).
+
+%% incompatible_con_lista/2  (Nivel 1)
+%% +Sintoma, +Lista: Sintoma choca con algún síntoma ya presente en Lista.
+incompatible_con_lista(S, Lista) :-
+    ( incompatible(S, Otro, _) ; incompatible(Otro, S, _) ),
+    memberchk(Otro, Lista), !.
+% CORTE: basta un choque; evita soluciones repetidas. Seguro: S y Lista ligados.
+
+%% --- Nivel 2: conjunto de conflictos y estado --------------------------------
+%% contradicciones/2
+%% +Lista, -Pares: lista de conflicto(A, B, Motivo) sin duplicados; [] si la
+%% entrada no es lista (nunca lanza excepción a Python).
+contradicciones(Lista, Pares) :-
+    is_list(Lista), !,
+    % CORTE: separa la entrada válida del caso no-lista de la cláusula siguiente.
+    findall(conflicto(A, B, M), par_contradictorio(Lista, A, B, M), Brutos),
+    list_to_set(Brutos, Pares).
+contradicciones(_, []).
+
+%% entrada_contradictoria/1
+%% +Lista: verdadero si hay al menos un conflicto.
+entrada_contradictoria(Lista) :-
+    is_list(Lista),
+    par_contradictorio(Lista, _, _, _), !.
+% CORTE: con un conflicto basta; no se enumeran los demás.
+
+%% estado_consistencia/2
+%% +Lista, -Estado: consistente | contradictoria. Lo consulta Python antes de
+%% mostrar diagnósticos.
+estado_consistencia(Lista, contradictoria) :-
+    entrada_contradictoria(Lista), !.
+% CORTE: precedencia; si hay conflicto no se evalúa la cláusula por defecto.
+estado_consistencia(_, consistente).
 
 %% =============================================================================
 %% SECCIÓN 15: REGLAS ADQUIRIDAS EN CALIENTE (PERSISTENCIA MODO EXPERTO)

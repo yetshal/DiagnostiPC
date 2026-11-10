@@ -19,6 +19,15 @@
 
 ---
 
+### Sesión 5 · 2026-11-10 · F7-01, F7-02, F7-04, F7-05
+
+- **Persona / agente:** yetshal + Claude Code (Opus 5.5)
+- **Hecho:** F7-01 Sección 16 de consistencia + `tests/tests_kb.pl` (no existía) + fix E-003. F7-02 `verificar_consistencia()`, aviso en Streamlit, casos 12–16. F7-04 `02-arquitectura` reescrito según el código. F7-05 informe PDF (generado con pruebas reales, D-027) y guion de sustentación. Comentarios `CORTE` en los cortes antiguos; capturas `01`/`02` renombradas; enlaces del README relativos; regla de commits sin atribución a IA.
+- **Pruebas:** plunit 11/11 · `pruebas.py` 16/16 · aviso de UI verificado con `AppTest`
+- **Commits:** ramas apiladas `feat/F7-01…` (39dfac1) → `feat/F7-02…` (841f4f5) → `docs/F7-04…` (00d1c61, + cierre)
+- **Correcciones humanas a la IA:** pidió prohibir la atribución a IA en los commits
+- **Siguiente:** F7-03 (validar pares con el técnico) y ensayo con el guion
+
 ### Sesión 4 · 2026-11-05 · F6-Entregable 3
 
 - **Persona / agente:** Pareja / Antigravity AI (Gemini 3.8 Flash)

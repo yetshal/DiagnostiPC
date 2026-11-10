@@ -55,12 +55,28 @@
 | CX3 | Límite inferior de severidad            | `pila_cmos` con problema ocasional      | severidad 1 (no baja de baja)                  |
 | CX4 | Umbral de certeza                       | evidencia que suma FC 19 vs. 20         | 19 descartado; 20 `posible`                    |
 
+## Pruebas de estrés y contradicciones (Entregable 4)
+
+Casos 12–16 de `pruebas.py` y suite plunit `tests/tests_kb.pl`. Pares incompatibles en `incompatible/3` (Sección 16 de `base_conocimiento.pl`, `[PENDIENTE-VALIDAR]` con T1).
+
+| Caso | Escenario                                  | Entrada                                                         | Esperado                                                        | Resultado |
+| ---- | ------------------------------------------ | --------------------------------------------------------------- | --------------------------------------------------------------- | --------- |
+| 12   | Contradicción directa                      | `[no_arranca, pitidos_bios, puertos_usb_fallan, fps_bajos]`     | `contradictoria`, conflicto `(no_arranca, fps_bajos)`, sin diagnósticos (aunque el patrón de placa madre está completo) | PASS |
+| 13   | Contradicción en lenguaje natural (DCG)    | «El equipo no enciende y tiene fps bajos»                       | DCG extrae `[no_arranca, fps_bajos]` → `contradictoria`          | PASS      |
+| 14   | Entradas ambiguas o basura (auditoría)     | `""`, `"   "`, `"asdf qwe !!! 123"`, «la computadora esta rara», «y y y pero ademas» | Sin síntomas, `consistente`, sin diagnósticos, sin excepciones | PASS      |
+| 15   | Combinación no prevista telemetría + texto | Telemetría del caso 11 + «no pasa del post»                     | 2 conflictos (`fps_bajos`, `throttling` con `no_arranca`), bloqueo | PASS  |
+| 16   | Modo Experto con regla contradictoria      | `falla_imposible = [no_arranca, throttling]`, `persistir=True`  | `ok=False` y `base_conocimiento.pl` sin cambios                  | PASS      |
+
+Además, `sintoma_desempate/4` no recomienda síntomas incompatibles con los ya reportados (plunit `desempate_no_sugiere_sintoma_incompatible`), y la interfaz Streamlit muestra el aviso de bloqueo (verificado con `streamlit.testing.v1.AppTest`).
+
 ## Registro de ejecución
 
-| Fecha      | Comando                         | Casos OK / total | Observaciones                         |
-| ---------- | ------------------------------- | ---------------- | ------------------------------------- |
-| 21/10/2026 | `python3 pruebas.py`            | 5 / 5            | Ejecución limpia, 100% PASS           |
-| 21/10/2026 | `swipl -q base_conocimiento.pl` | N/A              | Consulta directa en Prolog verificada |
+| Fecha      | Comando                                             | Casos OK / total | Observaciones                         |
+| ---------- | --------------------------------------------------- | ---------------- | ------------------------------------- |
+| 21/10/2026 | `python3 pruebas.py`                                | 5 / 5            | Ejecución limpia, 100% PASS           |
+| 21/10/2026 | `swipl -q base_conocimiento.pl`                     | N/A              | Consulta directa en Prolog verificada |
+| 10/11/2026 | `.venv\Scripts\python.exe pruebas.py`               | 16 / 16          | Incluye estrés y contradicciones (E4) |
+| 10/11/2026 | `swipl -q -g run_tests -t halt tests/tests_kb.pl`   | 11 / 11          | plunit, exit 0                        |
 
 ## Evidencia Fotográfica (Capturas de Terminal)
 
@@ -92,5 +108,6 @@ Demuestra que la lógica de inferencia reside enteramente en Prolog y funciona s
 
 - **Consulta:** `?- diagnosticar_todos([pantalla_azul, errores_memoria, reinicios_aleatorios], cualquiera, Diags).`
 - **Archivo:** `docs/entregables/evidencia/03_prolog_consulta_directa.png`
+- **Entorno de la captura:** Linux con SWI-Prolog 10.0.2 (prueba de portabilidad, RNF-09). El entorno Windows del proyecto usa 10.1.14 (ver `docs/ai/05-estado-sesion.md`).
 
 ![Consulta Directa Prolog](evidencia/03_prolog_consulta_directa.png)
