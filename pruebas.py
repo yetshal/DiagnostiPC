@@ -19,6 +19,8 @@ Ejecuta 11 casos de prueba que verifican:
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from motor_inferencia import MotorInferencia
 
 # ---------------------------------------------------------------------------
@@ -408,6 +410,126 @@ def main() -> None:
         esperado="[fps_bajos, sobrecalentamiento, throttling, voltaje_inestable] → diagnósticos activos",
         obtenido=f"sintomas={sintomas_num_11}, diags={[d['diagnostico'] for d in diags_num_11]}",
         ok=ok_11,
+    )
+
+    # -----------------------------------------------------------------------
+    # CASOS 12-16: Pruebas de estrés y contradicciones (Entregable 4)
+    # -----------------------------------------------------------------------
+    def ids(diags: list[dict]) -> list[str]:
+        return [d["diagnostico"] for d in diags]
+
+    # CASO 12: contradicción directa en la entrada manual
+    total += 1
+    entrada_12 = ["no_arranca", "pitidos_bios", "puertos_usb_fallan", "fps_bajos"]
+    cons_12 = motor.verificar_consistencia(entrada_12)
+    diags_12 = motor.consultar_diagnosticos(entrada_12)
+    ok_12 = (
+        cons_12["estado"] == "contradictoria"
+        and [(c["a"], c["b"]) for c in cons_12["conflictos"]] == [("no_arranca", "fps_bajos")]
+        and diags_12 == []
+    )
+    pasados += ok_12
+    imprimir_caso(
+        n=12,
+        titulo="Contradicción Directa (Bloqueo)",
+        objetivo="Patrón completo de placa madre + síntoma imposible → se bloquea el diagnóstico",
+        entrada=str(entrada_12),
+        consulta="verificar_consistencia + consultar_diagnosticos",
+        esperado="contradictoria, conflicto (no_arranca, fps_bajos), diagnósticos=[]",
+        obtenido=f"{cons_12['estado']}, {[(c['a'], c['b']) for c in cons_12['conflictos']]}, diags={ids(diags_12)}",
+        ok=ok_12,
+    )
+
+    # CASO 13: contradicción escrita en lenguaje natural (DCG)
+    total += 1
+    texto_13 = "El equipo no enciende y tiene fps bajos"
+    sint_13 = motor.procesar_texto_libre(texto_13)
+    cons_13 = motor.verificar_consistencia(sint_13)
+    ok_13 = sorted(sint_13) == ["fps_bajos", "no_arranca"] and cons_13["estado"] == "contradictoria"
+    pasados += ok_13
+    imprimir_caso(
+        n=13,
+        titulo="Contradicción por Lenguaje Natural (DCG)",
+        objetivo="La DCG extrae dos síntomas incompatibles → Prolog los detecta",
+        entrada=repr(texto_13),
+        consulta="procesar_texto_libre + verificar_consistencia",
+        esperado="[no_arranca, fps_bajos] → contradictoria",
+        obtenido=f"{sint_13} → {cons_13['estado']}",
+        ok=ok_13,
+    )
+
+    # CASO 14: entradas ambiguas, vacías o basura en la DCG (auditoría cruzada)
+    total += 1
+    textos_14 = ["", "   ", "asdf qwe !!! 123", "la computadora esta rara", "y y y pero ademas"]
+    try:
+        salidas_14 = []
+        for t in textos_14:
+            s = motor.procesar_texto_libre(t)
+            salidas_14.append((s, motor.verificar_consistencia(s)["estado"], ids(motor.consultar_diagnosticos(s))))
+        ok_14 = all(s == [] and e == "consistente" and d == [] for s, e, d in salidas_14)
+        obtenido_14 = str(salidas_14)
+    except Exception as exc:  # cualquier excepción es un fallo de robustez
+        ok_14 = False
+        obtenido_14 = f"EXCEPCION {type(exc).__name__}: {exc}"
+    pasados += ok_14
+    imprimir_caso(
+        n=14,
+        titulo="Entradas Ambiguas o Basura en la DCG",
+        objetivo="Texto vacío, ruido o vago → sin síntomas, sin diagnóstico y sin excepciones",
+        entrada=str(textos_14),
+        consulta="procesar_texto_libre + verificar_consistencia + consultar_diagnosticos",
+        esperado="[] / consistente / [] para cada texto",
+        obtenido=obtenido_14,
+        ok=ok_14,
+    )
+
+    # CASO 15: combinación no prevista entre telemetría y texto
+    total += 1
+    sint_15 = sorted(set(motor.discretizar_telemetria(telemetria_11, usar_ml=True))
+                     | set(motor.procesar_texto_libre("no pasa del post")))
+    cons_15 = motor.verificar_consistencia(sint_15)
+    diags_15 = motor.consultar_diagnosticos(sint_15)
+    pares_15 = sorted((c["a"], c["b"]) for c in cons_15["conflictos"])
+    ok_15 = (
+        cons_15["estado"] == "contradictoria"
+        and pares_15 == [("no_arranca", "fps_bajos"), ("no_arranca", "throttling")]
+        and diags_15 == []
+    )
+    pasados += ok_15
+    imprimir_caso(
+        n=15,
+        titulo="Telemetría + Texto Incompatibles",
+        objetivo="Sensores en ejecución (FPS, throttling) + usuario dice que no arranca → bloqueo",
+        entrada=f"telemetría caso 11 + 'no pasa del post' → {sint_15}",
+        consulta="discretizar_telemetria + procesar_texto_libre + verificar_consistencia",
+        esperado="contradictoria, 2 conflictos con no_arranca, diagnósticos=[]",
+        obtenido=f"{cons_15['estado']}, {pares_15}, diags={ids(diags_15)}",
+        ok=ok_15,
+    )
+
+    # CASO 16: el Modo Experto rechaza un patrón contradictorio sin tocar el .pl
+    total += 1
+    kb_path = Path(__file__).resolve().parent / "base_conocimiento.pl"
+    kb_antes = kb_path.read_text(encoding="utf-8")
+    res_16 = motor.adquirir_nuevo_diagnostico(
+        id_diag="falla_imposible",
+        componente="cpu",
+        severidad="alto",
+        sintomas=["no_arranca", "throttling"],
+        descripcion="Patrón contradictorio de prueba",
+        persistir=True,
+    )
+    ok_16 = res_16["ok"] is False and kb_path.read_text(encoding="utf-8") == kb_antes
+    pasados += ok_16
+    imprimir_caso(
+        n=16,
+        titulo="Modo Experto Rechaza Regla Contradictoria",
+        objetivo="Un patrón con síntomas incompatibles no entra en memoria ni en disco",
+        entrada="id=falla_imposible, síntomas=[no_arranca, throttling]",
+        consulta="adquirir_nuevo_diagnostico(persistir=True)",
+        esperado="ok=False y base_conocimiento.pl sin cambios",
+        obtenido=f"ok={res_16['ok']}, archivo_intacto={kb_path.read_text(encoding='utf-8') == kb_antes}",
+        ok=ok_16,
     )
 
     # -----------------------------------------------------------------------

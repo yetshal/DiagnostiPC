@@ -327,6 +327,20 @@ def render_app():
 
     st.markdown("---")
 
+    # Consistencia de la entrada (Prolog, Seccion 16). Cubre la entrada manual,
+    # la DCG y la telemetria, porque las tres terminan en sintomas_activos.
+    consistencia = motor.verificar_consistencia(sintomas_activos)
+    entrada_contradictoria = consistencia["estado"] == "contradictoria"
+    if entrada_contradictoria:
+        detalle = "\n".join(
+            f"- `{c['a']}` y `{c['b']}`: {c['motivo']}" for c in consistencia["conflictos"]
+        )
+        st.error(
+            "**Entrada contradictoria: diagnóstico bloqueado.**\n\n"
+            "Los siguientes síntomas no pueden presentarse a la vez:\n\n"
+            f"{detalle}\n\nQuite uno de cada par para continuar."
+        )
+
     # Ejecucion de inferencia en Prolog
     diagnosticos = motor.consultar_diagnosticos(sintomas_activos)
     componente_afectado = motor.obtener_componente_afectado(sintomas_activos)
@@ -380,6 +394,8 @@ def render_app():
         else:
             if not sintomas_activos:
                 st.info("Marque sintomas en la barra lateral para evaluar el equipo.")
+            elif entrada_contradictoria:
+                st.error("Sin dictamen: la entrada contiene síntomas incompatibles (ver aviso superior).")
             else:
                 st.warning(
                     "Evidencia insuficiente o no concluyente.\n\n"
