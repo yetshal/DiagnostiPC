@@ -542,6 +542,9 @@ def render_app():
             "escribiéndolos de forma persistente en `base_conocimiento.pl`."
         )
 
+        if msg := st.session_state.pop("msg_experto", None):
+            st.success(msg)
+
         with st.form("form_modo_experto"):
             col_f1, col_f2 = st.columns(2)
             with col_f1:
@@ -565,6 +568,11 @@ def render_app():
                     todos_sintomas,
                     help="Seleccione los síntomas requeridos para activar el nuevo diagnóstico",
                 )
+                sintomas_extra_txt = st.text_input(
+                    "Síntomas nuevos (separados por coma):",
+                    placeholder="ej. ruido_bobina, olor_quemado",
+                    help="Se registran en Prolog como sintoma_valido/1 del componente elegido",
+                )
                 persistir_disco = st.checkbox(
                     "Escribir persistentemente a base_conocimiento.pl",
                     value=True,
@@ -584,6 +592,9 @@ def render_app():
             )
 
             if btn_guardar:
+                sintomas_nuevos = sintomas_nuevos + [
+                    t.strip() for t in sintomas_extra_txt.split(",") if t.strip()
+                ]
                 if not id_nuevo.strip():
                     st.error("Debe ingresar un ID para el diagnóstico.")
                 elif not sintomas_nuevos:
@@ -598,8 +609,10 @@ def render_app():
                         persistir=persistir_disco,
                     )
                     if res.get("ok"):
-                        st.success(res["mensaje"])
+                        st.session_state["msg_experto"] = res["mensaje"]
                         LABELS_DIAGNOSTICOS[res["id"]] = id_nuevo.replace("_", " ").title()
+                        # La barra lateral ya se dibujó: recargar para listar los síntomas nuevos.
+                        st.rerun()
                     else:
                         st.error(res["mensaje"])
 

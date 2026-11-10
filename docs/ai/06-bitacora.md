@@ -19,6 +19,14 @@
 
 ---
 
+### Sesión 6 · 2026-11-10 · F7-06
+
+- **Persona / agente:** yetshal + Claude Code (Opus 5.5)
+- **Hecho:** bug reportado: el Modo Experto no permitía crear síntomas (multiselect cerrado). Campo de síntomas nuevos, `st.rerun()` tras guardar con mensaje conservado en `session_state`, marca `[PENDIENTE-VALIDAR]` en lo persistido. `.venv` recreado con uv (Streamlit 1.67.0).
+- **Pruebas:** plunit 11/11 · `pruebas.py` 17/17 (caso 17 nuevo, `AppTest`)
+- **Commits:** rama `fix/F7-06-sintoma-nuevo-experto` (sin commitear)
+- **Siguiente:** F7-03
+
 ### Sesión 5 · 2026-11-10 · F7-01, F7-02, F7-04, F7-05
 
 - **Persona / agente:** yetshal + Claude Code (Opus 5.5)
