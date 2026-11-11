@@ -616,6 +616,28 @@ def render_app():
                     else:
                         st.error(res["mensaje"])
 
+        adquiridos = motor.obtener_diagnosticos_adquiridos()
+        if adquiridos:
+            st.markdown("---")
+            st.markdown("##### Eliminar un diagnóstico adquirido en el Modo Experto:")
+            st.caption("Solo se pueden borrar los diagnósticos registrados desde este panel, no los de la base original.")
+            col_e1, col_e2 = st.columns([2, 1])
+            with col_e1:
+                id_borrar = st.selectbox("Diagnóstico a eliminar:", adquiridos, key="sel_borrar_experto")
+                confirmar = st.checkbox("Confirmo que deseo eliminarlo de forma permanente", key="chk_confirmar_borrado")
+            with col_e2:
+                st.write("")
+                if st.button("Eliminar diagnóstico", key="btn_borrar_experto", disabled=not confirmar):
+                    res = motor.eliminar_diagnostico(id_borrar)
+                    if res.get("ok"):
+                        LABELS_DIAGNOSTICOS.pop(res["id"], None)
+                        st.session_state["msg_experto"] = res["mensaje"]
+                        st.session_state.pop("chk_confirmar_borrado", None)
+                        # La barra lateral y el catálogo ya se dibujaron: recargar.
+                        st.rerun()
+                    else:
+                        st.error(res["mensaje"])
+
         st.markdown("---")
         st.markdown("##### Catálogo de Diagnósticos Registrados en la Base de Conocimiento:")
         diags_actuales = motor.obtener_diagnosticos_registrados()

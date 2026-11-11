@@ -51,3 +51,39 @@ test(experto_rechaza_patron_contradictorio, [fail]) :-
                                    [no_arranca, fps_bajos], 'prueba').
 
 :- end_tests(contradicciones).
+
+:- begin_tests(eliminar_experto).
+
+test(elimina_adquirido_y_limpia_sintoma_huerfano) :-
+    registrar_diagnostico_dinamico(dx_del, cpu, alto,
+                                   [sintoma_del_nuevo, throttling], 'prueba'),
+    sintoma_valido(sintoma_del_nuevo),
+    eliminar_diagnostico_dinamico(dx_del),
+    \+ patron_falla(dx_del, _),
+    \+ severidad_diagnostico(dx_del, _),
+    \+ diagnostico_describe(dx_del, _),
+    \+ diagnostico_adquirido(dx_del),
+    \+ sintoma_valido(sintoma_del_nuevo),
+    \+ componente_sintoma(_, sintoma_del_nuevo),
+    % un síntoma del catálogo base no se toca
+    sintoma_valido(throttling).
+
+test(conserva_sintoma_compartido) :-
+    registrar_diagnostico_dinamico(dx_a, cpu, alto, [sintoma_comp, throttling], 'a'),
+    registrar_diagnostico_dinamico(dx_b, cpu, alto, [sintoma_comp, fps_bajos], 'b'),
+    eliminar_diagnostico_dinamico(dx_a),
+    sintoma_valido(sintoma_comp),
+    eliminar_diagnostico_dinamico(dx_b),
+    \+ sintoma_valido(sintoma_comp).
+
+test(rechaza_diagnostico_estatico, [fail]) :-
+    eliminar_diagnostico_dinamico(falla_ram).
+
+test(rechaza_id_inexistente_o_invalido, [fail]) :-
+    eliminar_diagnostico_dinamico(_).
+
+test(estatico_intacto_tras_rechazo) :-
+    ( eliminar_diagnostico_dinamico(falla_ram) -> true ; true ),
+    patron_falla(falla_ram, _).
+
+:- end_tests(eliminar_experto).

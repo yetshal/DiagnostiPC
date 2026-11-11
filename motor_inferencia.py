@@ -16,11 +16,33 @@ from __future__ import annotations
 import os
 import re
 import unicodedata
+from ctypes import c_bool
 from pathlib import Path
 from typing import Optional
 
+import pyswip.core
 from pyswip import Prolog, Atom, Functor, Variable, Query
 from preprocesador_numerico import PreprocesadorTelemetria
+
+# ---------------------------------------------------------------------------
+# Compatibilidad PySwip ↔ SWI-Prolog 10 en Linux (x86_64 System V ABI)
+# ---------------------------------------------------------------------------
+# En SWI-Prolog 10, las funciones PL_is_* y PL_get_* retornan C99 bool (1 byte,
+# registro %al). En GCC (Linux x86_64), los 24 bits superiores de %eax no se
+# limpian al retornar bool. Como PySwip declara restype = c_int (32 bits), lee
+# basura no nula y evalúa PL_is_list como True para cualquier término compuesto,
+# provocando AttributeError: 'list' object has no attribute 'value'.
+# Forzar restype = c_bool resuelve la lectura a 1 byte sin afectar Windows.
+for _swipl_func_name in (
+    "PL_is_atom", "PL_is_atomic", "PL_is_compound", "PL_is_float",
+    "PL_is_functor", "PL_is_ground", "PL_is_initialised", "PL_is_integer",
+    "PL_is_list", "PL_is_number", "PL_is_string", "PL_is_variable",
+    "PL_get_list", "PL_get_atom", "PL_get_bool", "PL_get_integer",
+    "PL_get_long", "PL_get_float", "PL_get_functor", "PL_get_nil",
+    "PL_get_head", "PL_get_tail",
+):
+    if hasattr(pyswip.core, _swipl_func_name):
+        getattr(pyswip.core, _swipl_func_name).restype = c_bool
 
 # ---------------------------------------------------------------------------
 # Ruta absoluta a la base de conocimiento (misma carpeta que este módulo)
@@ -508,12 +530,13 @@ class MotorInferencia:
                         f"patron_falla({diag_clean}, {self._lista_pl(sintomas_limpios)}).\n"
                         f"severidad_diagnostico({diag_clean}, {sev_clean}).\n"
                         f"diagnostico_describe({diag_clean}, '{desc_escaped}').\n"
+                        f"diagnostico_adquirido({diag_clean}).\n"
                     )
                     for s in sintomas_limpios:
                         if f"componente_sintoma({comp_clean}, {s})" not in content:
                             bloque_pl += f"componente_sintoma({comp_clean}, {s}).\n"
                         if f"sintoma_valido({s})" not in content:
-                            bloque_pl += f"sintoma_valido({s}).\n"
+                            bloque_pl += f"sintoma_valido({s}).\nsintoma_adquirido({s}).\n"
 
                     with open(_KB_PATH, "a", encoding="utf-8") as f:
                         f.write(bloque_pl)
@@ -541,6 +564,77 @@ class MotorInferencia:
         except Exception as exc:
             print(f"[MotorInferencia] Error en obtener_diagnosticos_registrados: {exc}")
         return sorted(diags)
+
+    def obtener_diagnosticos_adquiridos(self) -> list[str]:
+        """Diagnósticos registrados desde el Modo Experto (los únicos que se pueden borrar)."""
+        diags: list[str] = []
+        try:
+            for sol in self._prolog.query("diagnostico_adquirido(Diag)"):
+                d = _atom_str(sol["Diag"])
+                if d not in diags:
+                    diags.append(d)
+        except Exception as exc:
+            print(f"[MotorInferencia] Error en obtener_diagnosticos_adquiridos: {exc}")
+        return sorted(diags)
+
+    def eliminar_diagnostico(self, id_diag: str, persistir: bool = True) -> dict:
+        """
+        Borra un diagnóstico adquirido en el Modo Experto: Prolog decide si se puede
+        (eliminar_diagnostico_dinamico/1) y luego se quita su bloque de base_conocimiento.pl.
+
+        Returns
+        -------
+        {'ok': bool, 'id': str, 'mensaje': str}
+        """
+        diag = re.sub(r"[^a-z0-9_]", "_", id_diag.strip().lower())
+        try:
+            if not diag or not list(self._prolog.query(f"eliminar_diagnostico_dinamico({diag})")):
+                return {
+                    "ok": False,
+                    "id": diag,
+                    "mensaje": f"'{diag}' no es un diagnóstico adquirido en el Modo Experto; no se puede eliminar.",
+                }
+        except Exception as exc:
+            return {"ok": False, "id": diag, "mensaje": f"Error al eliminar en Prolog: {exc}"}
+
+        if persistir and _KB_PATH.exists():
+            try:
+                self._quitar_bloque_de_disco(diag)
+            except Exception as exc:
+                return {
+                    "ok": True,
+                    "id": diag,
+                    "mensaje": f"Diagnóstico '{diag}' eliminado de memoria, pero falló al actualizar el archivo: {exc}",
+                }
+        return {"ok": True, "id": diag, "mensaje": f"Diagnóstico '{diag}' eliminado."}
+
+    def _quitar_bloque_de_disco(self, diag: str) -> None:
+        """
+        Quita de base_conocimiento.pl los bloques `[DINAMICO … : diag]`. Conserva las
+        líneas de síntomas que siguen vivos en memoria (los usa otro diagnóstico
+        adquirido que dependía de que este bloque los declarara).
+        """
+        vivos = {
+            _atom_str(sol["S"]) for sol in self._prolog.query("sintoma_adquirido(S)")
+        }
+        cabecera = f"%% [DINAMICO - ADQUIRIDO EN CALIENTE: {diag}]"
+        patron_sintoma = re.compile(
+            r"(?:sintoma_valido|sintoma_adquirido)\((\w+)\)\.|componente_sintoma\(\w+, (\w+)\)\."
+        )
+        partes = re.split(r"(?m)^(?=%% \[DINAMICO - )", _KB_PATH.read_text(encoding="utf-8"))
+        salida: list[str] = []
+        for parte in partes:
+            if not parte.startswith(cabecera):
+                salida.append(parte)
+                continue
+            lineas = parte.splitlines()
+            conservadas = [
+                l for l in lineas[1:]
+                if (m := patron_sintoma.match(l)) and (m.group(1) or m.group(2)) in vivos
+            ]
+            if conservadas:
+                salida.append("\n".join([lineas[0], *conservadas]) + "\n\n")
+        _KB_PATH.write_text("".join(salida), encoding="utf-8")
 
     def discretizar_telemetria(
         self, datos_telemetria: dict[str, float], usar_ml: bool = True

@@ -15,6 +15,8 @@
 - [x] **F7-04** · Reescribir `docs/ai/02-arquitectura.md` según el código real (hoy marcado como desactualizado). — _Resp.:_ K+I
 - [x] **F7-05** · Informe técnico PDF (arquitectura final, árbol lógico N1–N3, reporte de pruebas de estrés) y guion de modificaciones en vivo. — _Dep:_ F7-02 — _Resp.:_ K+I
 - [x] **F7-06** · Modo Experto: campo «Síntomas nuevos» en el formulario (antes solo se podía elegir entre los existentes) y `st.rerun()` para que la barra lateral los liste. Bloque persistido marcado `[PENDIENTE-VALIDAR]`. — _AC:_ caso 17 de `pruebas.py` (`AppTest`); 17/17. — _Resp.:_ K
+- [x] **F7-07** · Compatibilidad FFI Linux (SWI-Prolog 10 / PySwip ABI) — En Linux GCC (x86_64), `PL_is_*` y `PL_get_*` retornan `bool` (1 byte, `%al`) y PySwip leía `c_int` (32 bits), evaluando falsos como verdaderos y rompiendo el catálogo de Streamlit (E-005). Configurado `restype = c_bool` en `motor_inferencia.py`. — _AC:_ 17/17 `pruebas.py`; 22 checkboxes y catálogo completo en Streamlit. — _Resp.:_ I
+- [x] **F7-08** · Modo Experto: borrar diagnósticos adquiridos — `eliminar_diagnostico_dinamico/1` (Prolog) con marcas `diagnostico_adquirido/1` y `sintoma_adquirido/1`; `eliminar_diagnostico()` y `obtener_diagnosticos_adquiridos()` en Python; selector con confirmación en Streamlit; §15 del `.pl` sin bloques duplicados. — _AC:_ plunit 16/16; `pruebas.py` 19/19 (casos 18–19). — _Resp.:_ I
 
 ---
 

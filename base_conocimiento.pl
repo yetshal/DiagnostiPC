@@ -14,6 +14,8 @@
 :- dynamic severidad_diagnostico/2.
 :- dynamic diagnostico_describe/2.
 :- dynamic excluye/2.
+:- dynamic diagnostico_adquirido/1.
+:- dynamic sintoma_adquirido/1.
 
 %% Cláusulas dinámicas pueden aparecer al final del archivo al persistir
 :- discontiguous sintoma_valido/1.
@@ -21,6 +23,8 @@
 :- discontiguous patron_falla/2.
 :- discontiguous severidad_diagnostico/2.
 :- discontiguous diagnostico_describe/2.
+:- discontiguous diagnostico_adquirido/1.
+:- discontiguous sintoma_adquirido/1.
 
 %% =============================================================================
 %% SECCIÓN 1: HECHOS BASE - SÍNTOMAS CONOCIDOS
@@ -785,12 +789,37 @@ registrar_diagnostico_dinamico(IdDiag, Componente, Severidad, ListaSintomas, Des
     assertz(patron_falla(IdDiag, ListaSintomas)),
     assertz(severidad_diagnostico(IdDiag, Severidad)),
     assertz(diagnostico_describe(IdDiag, Descripcion)),
+    assertz(diagnostico_adquirido(IdDiag)),
     forall(
         member(Sintoma, ListaSintomas),
         (
             ( componente_sintoma(Componente, Sintoma) -> true ; assertz(componente_sintoma(Componente, Sintoma)) ),
-            ( sintoma_valido(Sintoma) -> true ; assertz(sintoma_valido(Sintoma)) )
+            ( sintoma_valido(Sintoma) -> true
+            ; assertz(sintoma_valido(Sintoma)), assertz(sintoma_adquirido(Sintoma)) )
         )
+    ).
+
+%% eliminar_diagnostico_dinamico/1
+%% +IdDiag: borra un diagnóstico registrado desde el Modo Experto y los síntomas
+%% que esa regla creó y que ningún otro patrón usa. Falla (sin tocar nada) si
+%% IdDiag no es un átomo ligado o no está marcado como diagnostico_adquirido/1,
+%% de modo que las reglas base del curso nunca se pueden eliminar.
+eliminar_diagnostico_dinamico(IdDiag) :-
+    atom(IdDiag),
+    diagnostico_adquirido(IdDiag),
+    findall(L, patron_falla(IdDiag, L), Listas),
+    retractall(patron_falla(IdDiag, _)),
+    retractall(severidad_diagnostico(IdDiag, _)),
+    retractall(diagnostico_describe(IdDiag, _)),
+    retractall(diagnostico_adquirido(IdDiag)),
+    forall(
+        ( member(Lista, Listas), member(S, Lista), sintoma_adquirido(S),
+          % \+ seguro: S ligado por member/2 y sintoma_adquirido/1 antes de negar.
+          % Solo se borra el síntoma si ningún patrón restante lo usa.
+          \+ ( patron_falla(_, Otra), memberchk(S, Otra) ) ),
+        ( retractall(sintoma_adquirido(S)),
+          retractall(sintoma_valido(S)),
+          retractall(componente_sintoma(_, S)) )
     ).
 
 %% =============================================================================
@@ -864,30 +893,16 @@ estado_consistencia(_, consistente).
 patron_falla(falla_vrm_placa, [voltaje_inestable,apagado_brusco]).
 severidad_diagnostico(falla_vrm_placa, critico).
 diagnostico_describe(falla_vrm_placa, 'Falla en modulo regulador de voltaje (VRM) de la placa madre.').
+diagnostico_adquirido(falla_vrm_placa).
 componente_sintoma(placa_madre, voltaje_inestable).
 sintoma_valido(voltaje_inestable).
+sintoma_adquirido(voltaje_inestable).
 componente_sintoma(placa_madre, apagado_brusco).
 sintoma_valido(apagado_brusco).
-
-%% [DINAMICO - ADQUIRIDO EN CALIENTE: falla_vrm_placa]
-patron_falla(falla_vrm_placa, [voltaje_inestable,apagado_brusco]).
-severidad_diagnostico(falla_vrm_placa, critico).
-diagnostico_describe(falla_vrm_placa, 'Falla en modulo regulador de voltaje (VRM) de la placa madre.').
-componente_sintoma(placa_madre, voltaje_inestable).
-sintoma_valido(voltaje_inestable).
-componente_sintoma(placa_madre, apagado_brusco).
-sintoma_valido(apagado_brusco).
-
-%% [DINAMICO - ADQUIRIDO EN CALIENTE: falla_vrm_placa]
-patron_falla(falla_vrm_placa, [voltaje_inestable,apagado_brusco]).
-severidad_diagnostico(falla_vrm_placa, critico).
-diagnostico_describe(falla_vrm_placa, 'Falla en modulo regulador de voltaje (VRM) de la placa madre.').
-componente_sintoma(placa_madre, voltaje_inestable).
-sintoma_valido(voltaje_inestable).
-componente_sintoma(placa_madre, apagado_brusco).
-sintoma_valido(apagado_brusco).
+sintoma_adquirido(apagado_brusco).
 
 %% [DINAMICO - ADQUIRIDO EN CALIENTE: falla_pasta_termica]
 patron_falla(falla_pasta_termica, [sobrecalentamiento,throttling]).
 severidad_diagnostico(falla_pasta_termica, alto).
 diagnostico_describe(falla_pasta_termica, 'Degradación del compuesto térmico entre el procesador y el disipador. Se recomienda limpiar con alcohol isopropílico y reaplicar pasta térmica de alta conductividad.').
+diagnostico_adquirido(falla_pasta_termica).

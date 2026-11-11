@@ -560,6 +560,76 @@ def main() -> None:
         ok=ok_17,
     )
 
+    # CASO 18: borrar un diagnóstico adquirido (Prolog + archivo) sobre una copia del .pl
+    # -----------------------------------------------------------------------
+    total += 1
+    import shutil
+    import tempfile
+    import motor_inferencia as _mi
+
+    kb_real = _mi._KB_PATH
+    with tempfile.TemporaryDirectory() as tmp:
+        kb_copia = Path(tmp) / "base_conocimiento.pl"
+        shutil.copy(kb_real, kb_copia)
+        _mi._KB_PATH = kb_copia
+        try:
+            m18 = motor  # misma instancia: PySwip comparte un único motor Prolog
+            reg = m18.adquirir_nuevo_diagnostico(
+                "falla_borrable_prueba", "cpu", "alto", ["ruido_borrable_prueba", "throttling"], "prueba"
+            )
+            en_disco = "falla_borrable_prueba" in kb_copia.read_text(encoding="utf-8")
+            res_base = m18.eliminar_diagnostico("falla_ram")
+            res_del = m18.eliminar_diagnostico("falla_borrable_prueba")
+            texto_final = kb_copia.read_text(encoding="utf-8")
+            ok_18 = (
+                reg["ok"] and en_disco
+                and not res_base["ok"] and "falla_ram" in m18.obtener_diagnosticos_registrados()
+                and res_del["ok"]
+                and "falla_borrable_prueba" not in m18.obtener_diagnosticos_registrados()
+                and "ruido_borrable_prueba" not in m18.obtener_catalogo_sintomas()
+                and "falla_borrable_prueba" not in texto_final
+                and "ruido_borrable_prueba" not in texto_final
+                and "throttling" in m18.obtener_catalogo_sintomas()
+            )
+        finally:
+            _mi._KB_PATH = kb_real
+    pasados += ok_18
+    imprimir_caso(
+        n=18,
+        titulo="Modo Experto Borra Diagnóstico Adquirido",
+        objetivo="Se borra lo adquirido (memoria, síntoma huérfano y archivo); lo base se rechaza",
+        entrada="registrar falla_borrable_prueba; eliminar falla_borrable_prueba y falla_ram",
+        consulta="eliminar_diagnostico (copia temporal de base_conocimiento.pl)",
+        esperado="adquirido eliminado de memoria y archivo; falla_ram rechazada",
+        obtenido=f"base_rechazada={not res_base['ok']}, eliminado={res_del['ok']}, ok={ok_18}",
+        ok=ok_18,
+    )
+
+    # CASO 19: botón de borrado en Streamlit (borra lo creado en el caso 17)
+    # -----------------------------------------------------------------------
+    total += 1
+    app.run()
+    app.checkbox(key="chk_confirmar_borrado").check()
+    app.run()
+    sel = app.selectbox(key="sel_borrar_experto")
+    sel.select("falla_bobina_prueba")
+    app.run()
+    app.button(key="btn_borrar_experto").click()
+    app.run()
+    claves_19 = {c.key for c in app.checkbox}
+    ok_19 = not app.exception and "chk_ruido_bobina_prueba" not in claves_19
+    pasados += ok_19
+    imprimir_caso(
+        n=19,
+        titulo="Botón Eliminar del Modo Experto",
+        objetivo="Confirmar y eliminar quita el diagnóstico y su síntoma de la barra lateral",
+        entrada="selectbox=falla_bobina_prueba + confirmación",
+        consulta="AppTest(main.py) → botón «Eliminar diagnóstico»",
+        esperado="checkbox chk_ruido_bobina_prueba ausente, sin excepción",
+        obtenido=f"ausente={'chk_ruido_bobina_prueba' not in claves_19}, excepcion={bool(app.exception)}",
+        ok=ok_19,
+    )
+
     # -----------------------------------------------------------------------
     # Resumen final
     # -----------------------------------------------------------------------
