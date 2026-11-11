@@ -19,6 +19,14 @@
 
 ---
 
+### Sesión 8 · 2026-11-11 · F7-08
+
+- **Persona / agente:** K / Claude Code
+- **Hecho:** borrado de diagnósticos adquiridos en el Modo Experto (Prolog, motor y Streamlit con confirmación); §15 del `.pl` sin duplicados y con marcas de adquirido.
+- **Pruebas:** plunit 16/16; `python pruebas.py` 19/19 (casos 18 y 19 nuevos).
+- **Commits:** pendiente (rama `feat/F7-08-borrar-experto`).
+- **Correcciones humanas a la IA:** ninguna. Error propio: un `git checkout` descartó cambios sin commitear en el `.pl`; se rehicieron.
+
 ### Sesión 7 · 2026-11-11 · Fix E-005 (PySwip ABI Linux)
 
 - **Persona / agente:** yetshal + Antigravity (Gemini 3.8 Flash)

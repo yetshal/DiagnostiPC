@@ -88,6 +88,7 @@ Los predicados de hechos son `dynamic` y `discontiguous` porque el Modo Experto 
 | `recomendar_siguiente_sintoma(s)`   | `sintoma_desempate/4`                          | dict o `None`                                      |
 | `procesar_texto_libre(t)`           | `extraer_sintomas_dcg/2`                       | lista de síntomas (`[]` ante texto vacío o ruido)  |
 | `adquirir_nuevo_diagnostico(...)`   | `registrar_diagnostico_dinamico/5`             | `{'ok','id','mensaje'}`; solo persiste si Prolog aceptó |
+| `eliminar_diagnostico(id)`          | `eliminar_diagnostico_dinamico/1`              | `{'ok','id','mensaje'}`; solo borra lo marcado `diagnostico_adquirido/1`, luego quita el bloque del `.pl` |
 | `discretizar_telemetria(d)`         | — (Python, `preprocesador_numerico.py`)        | lista de síntomas                                  |
 
 **Reglas del puente**
