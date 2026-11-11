@@ -95,3 +95,12 @@
 - **Fecha / sesión:** 2026-11-10 / Sesión 5
 - **Síntoma:** `python` abre el alias de Microsoft Store; ningún Python global tiene `pyswip`. La carpeta `venv/` existente está rota (`Scripts/` vacío, sin `pyvenv.cfg`); se puede borrar.
 - **Solución:** `py -3.14 -m venv .venv` y `.venv\Scripts\python.exe -m pip install -r requirements.txt`; ejecutar todo con `.venv\Scripts\python.exe`.
+
+### E-005 · `AttributeError: 'list' object has no attribute 'value'` en PySwip con SWI-Prolog 10 en Linux (`motor_inferencia.py`)
+
+- **Fecha / sesión:** 2026-11-11 / Sesión 6
+- **Síntoma:** Al consultar la base de conocimiento en Linux, PySwip falla con `'list' object has no attribute 'value'`. Streamlit muestra la barra lateral vacía ("No se encontraron sintomas coincidentes") y el catálogo de diagnósticos vacío. En Windows funcionaba normalmente.
+- **Causa:** SWI-Prolog 10 cambió el tipo de retorno en C de `PL_is_*` y `PL_get_*` a `bool` (1 byte, registro `%al`). En GCC (Linux x86_64 System V ABI), los 24 bits superiores de `%eax` contienen basura al retornar `bool`. Como PySwip 0.3.3 declara `restype = c_int` (32 bits), lee valores no-cero espurios y evalúa `PL_is_list` como `True` para términos compuestos (`=(Lista, [...])`), devolviendo `[[]]` en vez de la ligadura y rompiendo `normalize_values()`.
+- **Solución:** Forzar `restype = c_bool` en `pyswip.core` para todas las funciones de inspección `PL_is_*` y `PL_get_*` al importar `motor_inferencia.py`.
+- **Archivos:** `motor_inferencia.py`.
+- **Cómo evitarlo:** Siempre configurar tipos FFI exactos (`c_bool` para `bool`) al conectar con bibliotecas nativas C en 64 bits.

@@ -16,11 +16,33 @@ from __future__ import annotations
 import os
 import re
 import unicodedata
+from ctypes import c_bool
 from pathlib import Path
 from typing import Optional
 
+import pyswip.core
 from pyswip import Prolog, Atom, Functor, Variable, Query
 from preprocesador_numerico import PreprocesadorTelemetria
+
+# ---------------------------------------------------------------------------
+# Compatibilidad PySwip ↔ SWI-Prolog 10 en Linux (x86_64 System V ABI)
+# ---------------------------------------------------------------------------
+# En SWI-Prolog 10, las funciones PL_is_* y PL_get_* retornan C99 bool (1 byte,
+# registro %al). En GCC (Linux x86_64), los 24 bits superiores de %eax no se
+# limpian al retornar bool. Como PySwip declara restype = c_int (32 bits), lee
+# basura no nula y evalúa PL_is_list como True para cualquier término compuesto,
+# provocando AttributeError: 'list' object has no attribute 'value'.
+# Forzar restype = c_bool resuelve la lectura a 1 byte sin afectar Windows.
+for _swipl_func_name in (
+    "PL_is_atom", "PL_is_atomic", "PL_is_compound", "PL_is_float",
+    "PL_is_functor", "PL_is_ground", "PL_is_initialised", "PL_is_integer",
+    "PL_is_list", "PL_is_number", "PL_is_string", "PL_is_variable",
+    "PL_get_list", "PL_get_atom", "PL_get_bool", "PL_get_integer",
+    "PL_get_long", "PL_get_float", "PL_get_functor", "PL_get_nil",
+    "PL_get_head", "PL_get_tail",
+):
+    if hasattr(pyswip.core, _swipl_func_name):
+        getattr(pyswip.core, _swipl_func_name).restype = c_bool
 
 # ---------------------------------------------------------------------------
 # Ruta absoluta a la base de conocimiento (misma carpeta que este módulo)

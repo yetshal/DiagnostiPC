@@ -19,6 +19,14 @@
 
 ---
 
+### Sesión 7 · 2026-11-11 · Fix E-005 (PySwip ABI Linux)
+
+- **Persona / agente:** yetshal + Antigravity (Gemini 3.8 Flash)
+- **Hecho:** diagnóstico y corrección de incompatibilidad FFI entre PySwip 0.3.3 y SWI-Prolog 10 en Linux x86_64 ABI: `PL_is_*` y `PL_get_*` retornan C99 `bool` y GCC no limpia los bits superiores de `%eax`, produciendo `AttributeError: 'list' object has no attribute 'value'` y dejando la base vacía en Streamlit. Forzado `restype = c_bool` en `motor_inferencia.py`. Registrado E-005 y D-028.
+- **Pruebas:** plunit 11/11 · `pruebas.py` 17/17 PASS · `AppTest(main.py)` 22 checkboxes.
+- **Commits:** rama `fix/pyswip-linux-swipl10`
+- **Siguiente:** F7-03
+
 ### Sesión 6 · 2026-11-10 · F7-06
 
 - **Persona / agente:** yetshal + Claude Code (Opus 5.5)
